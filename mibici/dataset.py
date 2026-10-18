@@ -118,9 +118,10 @@ def a_entero(df: pd.DataFrame, columnas: list[str], archivo: str) -> None:
 
 
 def procesar_viajes(ruta: Path) -> pd.DataFrame:
+    """Lee y tipa un mes de viajes. Las columnas personales se quitan después de deduplicar."""
     df = leer_csv(ruta)
     validar_columnas(df, COLUMNAS_VIAJES, ruta.name)
-    df = df[COLUMNAS_VIAJES].drop(columns=COLUMNAS_PERSONALES)
+    df = df[COLUMNAS_VIAJES].copy()
     for col in COLUMNAS_FECHA:
         df[col] = pd.to_datetime(df[col], format="%Y-%m-%d %H:%M:%S")
     a_entero(df, COLUMNAS_ID_VIAJES, ruta.name)
@@ -135,6 +136,28 @@ def procesar_estaciones(ruta: Path) -> pd.DataFrame:
     df["latitude"] = df["latitude"].astype("float64")
     df["longitude"] = df["longitude"].astype("float64")
     return df
+
+
+def quitar_sin_estacion(
+    viajes: pd.DataFrame, estaciones: pd.DataFrame
+) -> tuple[pd.DataFrame, dict[int, int]]:
+    """Descarta viajes con origen o destino ausente de la nomenclatura.
+
+    Devuelve los viajes conservados y, por cada estación ausente, cuántos viajes
+    descartados la involucran (un viaje con ambas puntas ausentes cuenta en cada una).
+    """
+    conocidas = estaciones["id"]
+    sin_origen = ~viajes["origen_id"].isin(conocidas)
+    sin_destino = ~viajes["destino_id"].isin(conocidas)
+    descartados = viajes[sin_origen | sin_destino]
+    ausentes = sorted(
+        set(viajes.loc[sin_origen, "origen_id"]) | set(viajes.loc[sin_destino, "destino_id"])
+    )
+    por_estacion = {
+        int(i): int(((descartados["origen_id"] == i) | (descartados["destino_id"] == i)).sum())
+        for i in ausentes
+    }
+    return viajes[~(sin_origen | sin_destino)], por_estacion
 
 
 def sha256_archivo(ruta: Path) -> str:
@@ -185,27 +208,16 @@ def ejecutar() -> None:
 
     logger.info("Procesando viajes...")
     archivos = []
-    viajes_por_mes = {}
     tablas = []
     for mes, url in URLS_VIAJES.items():
         ruta = RAW_DATA_DIR / f"datos_abiertos_{mes}.csv"
         df = procesar_viajes(ruta)
-        tablas.append(df)
-        viajes_por_mes[mes] = len(df)
+        tablas.append(df.assign(mes_archivo=mes))
         archivos.append(
             {"nombre": ruta.name, "url": url, "registros": len(df), "sha256": sha256_archivo(ruta)}
         )
     viajes = pd.concat(tablas, ignore_index=True)
-
-    fuera = ~viajes["inicio_del_viaje"].between(
-        pd.Timestamp(FECHA_INICIO),
-        pd.Timestamp(FECHA_FIN) + pd.Timedelta(days=1),
-        inclusive="left",
-    )
-    if fuera.any():
-        logger.warning(
-            f"{fuera.sum()} viajes inician fuera de {FECHA_INICIO} a {FECHA_FIN}; no se filtran."
-        )
+    n_crudos = len(viajes)
 
     logger.info("Procesando estaciones...")
     ruta_nomenclatura = RAW_DATA_DIR / Path(URL_NOMENCLATURA).name
@@ -219,6 +231,28 @@ def ejecutar() -> None:
         }
     )
 
+    # Duplicado exacto: fila idéntica en todas las columnas del CSV original
+    viajes = viajes.drop_duplicates(subset=COLUMNAS_VIAJES, ignore_index=True)
+    n_duplicados = n_crudos - len(viajes)
+    logger.info(f"Duplicados exactos eliminados: {n_duplicados}")
+
+    viajes, descartados_por_estacion = quitar_sin_estacion(viajes, estaciones)
+    n_sin_estacion = n_crudos - n_duplicados - len(viajes)
+    logger.info(f"Viajes descartados por estación ausente de la nomenclatura: {n_sin_estacion}")
+
+    viajes_por_mes = viajes["mes_archivo"].value_counts().sort_index()
+    viajes = viajes.drop(columns=COLUMNAS_PERSONALES + ["mes_archivo"]).reset_index(drop=True)
+
+    fuera = ~viajes["inicio_del_viaje"].between(
+        pd.Timestamp(FECHA_INICIO),
+        pd.Timestamp(FECHA_FIN) + pd.Timedelta(days=1),
+        inclusive="left",
+    )
+    if fuera.any():
+        logger.warning(
+            f"{fuera.sum()} viajes inician fuera de {FECHA_INICIO} a {FECHA_FIN}; no se filtran."
+        )
+
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
     viajes.to_parquet(PROCESSED_DATA_DIR / "viajes.parquet", index=False)
     estaciones.to_parquet(PROCESSED_DATA_DIR / "estaciones.parquet", index=False)
@@ -229,6 +263,11 @@ def ejecutar() -> None:
     typer.echo("\nResumen de la ingesta")
     for mes, n in viajes_por_mes.items():
         typer.echo(f"  Viajes {mes}: {n:,}")
+    typer.echo(f"  Registros crudos: {n_crudos:,}")
+    typer.echo(f"  Duplicados exactos eliminados: {n_duplicados:,}")
+    typer.echo(f"  Viajes descartados por estación fuera de la nomenclatura: {n_sin_estacion:,}")
+    for estacion, n in descartados_por_estacion.items():
+        typer.echo(f"    Estación {estacion}: {n:,} viajes")
     typer.echo(f"  Total de viajes: {len(viajes):,}")
     typer.echo(f"  Estaciones: {len(estaciones):,}")
     typer.echo(f"  Versión de datos: {version}")
