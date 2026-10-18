@@ -33,9 +33,9 @@ flowchart TD
     end
 
     subgraph Modelos["5. Modelado y MLflow (mibici.modeling)"]
-        E1["P1 Regresión: Dummy vs Ridge con rezagos"]
-        E2["P2 Clasificación: Dummy vs Regresión Logística balanceada"]
-        E3["P3 Clustering: KMeans sobre perfiles de estación"]
+        E1["P1 Regresión: rezago semanal vs Ridge con rezagos"]
+        E2["P2 Clasificación: persistencia de saldo vs Regresión Logística balanceada"]
+        E3["P3 Clustering: KMeans sobre perfiles horarios estandarizados"]
         E4["MLflow Tracking: experimento mibici-equipo09 con tags, métricas y artefactos"]
     end
 
