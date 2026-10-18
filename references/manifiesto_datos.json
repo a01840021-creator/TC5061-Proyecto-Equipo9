@@ -1,0 +1,47 @@
+{
+  "version_datos": "0c4b34e5425a",
+  "archivos": [
+    {
+      "nombre": "datos_abiertos_2026_04.csv",
+      "url": "https://www.mibici.net/site/assets/files/124927/datos_abiertos_2026_04.csv",
+      "registros": 351851,
+      "sha256": "9165342d0169f2c0ba4fb2c944003147c8a95d77f9058361b451cadf141b2483"
+    },
+    {
+      "nombre": "datos_abiertos_2026_05.csv",
+      "url": "https://www.mibici.net/site/assets/files/125943/datos_abiertos_2026_05.csv",
+      "registros": 315895,
+      "sha256": "d0ac16ae3a75b8ac40565176e2e607c99c756a385860caa7e2ffb351082c9d45"
+    },
+    {
+      "nombre": "datos_abiertos_2026_06.csv",
+      "url": "https://www.mibici.net/site/assets/files/127734/datos_abiertos_2026_06.csv",
+      "registros": 355303,
+      "sha256": "a4d195786a3599b155829288a0432cd9e76c6780dc693c0e9579d11e11c49a27"
+    },
+    {
+      "nombre": "datos_abiertos_2026_07.csv",
+      "url": "https://www.mibici.net/site/assets/files/129006/datos_abiertos_2026_07.csv",
+      "registros": 388257,
+      "sha256": "3f9db9fed985977b175001a984302eae7c61326a75ed93afae9c8fc17bbdb922"
+    },
+    {
+      "nombre": "datos_abiertos_2026_08.csv",
+      "url": "https://www.mibici.net/site/assets/files/130362/datos_abiertos_2026_08.csv",
+      "registros": 393524,
+      "sha256": "e34f39b9ad204ae0b66f3538894a5f86ed03f46d98701169d3e4d95952d5f671"
+    },
+    {
+      "nombre": "datos_abiertos_2026_09.csv",
+      "url": "https://www.mibici.net/site/assets/files/131825/datos_abiertos_2026_09.csv",
+      "registros": 490056,
+      "sha256": "00b5cf64cc31a502d01044d905f6e033f9bc1db962e771119742fd25c6cb58b3"
+    },
+    {
+      "nombre": "nomenclatura_2026_09.csv",
+      "url": "https://www.mibici.net/site/assets/files/1118/nomenclatura_2026_09.csv",
+      "registros": 484,
+      "sha256": "206e45fe633922b634d858142fa21e6fd9f4c421b6435c02980ef290cc2df90d"
+    }
+  ]
+}
