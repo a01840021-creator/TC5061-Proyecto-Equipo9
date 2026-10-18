@@ -8,8 +8,8 @@ Proyecto integrador del equipo 9. Propone y construye una solución de Machine L
 | --- | --- | --- |
 | A01840021 | Carrera Rojas, Mariana Judith | Configuración inicial: estructura con Cookiecutter Data Science, repositorio en GitHub y protección de la rama principal |
 | A01797854 | Barrera Mendoza, José Manuel | Formulación del problema y ML Canvas, definición de los datos, dependencias con versión fija, ingesta reproducible y versionado de datos, flujo de trabajo con Git |
-| A01797868 | Barranco Cruz, Luis Fernando | Por definir |
-| A01840136 | Carrera Castillo, David | Por definir |
+| A01797868 | Barranco Cruz, Luis Fernando | Implementación de los baselines P1, P2 y P3; instrumentación con MLflow Tracking; métricas, artefactos y pruebas automatizadas |
+| A01840136 | Carrera Castillo, David | Análisis exploratorio, módulo reutilizable de feature engineering sin fuga temporal y diagrama de arquitectura |
 
 ## Preguntas del proyecto
 
@@ -32,18 +32,45 @@ Proyecto integrador del equipo 9. Propone y construye una solución de Machine L
 
 Requiere Python 3.10.
 
+Con `uv`:
+
 ```bash
 uv venv .venv --python 3.10
 source .venv/bin/activate
 uv pip install -r requirements.txt
 ```
 
+Como alternativa, con Conda y `pip`:
+
+```bash
+conda create -n mibici-equipo9 python=3.10 -y
+conda activate mibici-equipo9
+python -m pip install -r requirements.txt
+```
+
 ## Uso
 
 | Comando | Qué hace |
 | --- | --- |
-| `make data` | Descarga los seis meses y la nomenclatura, limpia, guarda en Parquet y escribe el manifiesto |
-| Por definir | Experimento base en MLflow, un run por pregunta |
+| `python -m mibici.dataset` | Descarga los seis meses y la nomenclatura, limpia, guarda en Parquet y escribe el manifiesto |
+| `python -m mibici.modeling.train --pregunta all` | Ejecuta P1, P2 y P3 y registra tres runs en `mibici-equipo09` |
+| `python -m mibici.modeling.train --pregunta P1` | Ejecuta únicamente el baseline de regresión |
+| `python -m mibici.modeling.train --pregunta P2` | Ejecuta únicamente el baseline de clasificación |
+| `python -m mibici.modeling.train --pregunta P3` | Ejecuta únicamente el baseline de clustering |
+| `mlflow ui --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5000` | Abre la interfaz local de MLflow |
+| `python -m pytest -q tests` | Ejecuta las pruebas automatizadas |
+
+### Experimento base
+
+Todos los runs se agrupan en el experimento `mibici-equipo09` y registran el rango de
+fechas, la versión de datos `0c4b34e5425a`, la semilla, el modelo, el tamaño de cada
+partición y etiquetas con el equipo, la pregunta, el autor y el commit de Git.
+
+| Pregunta | Baseline | Métricas principales | Artefactos |
+| --- | --- | --- | --- |
+| P1 | Demanda de la misma estación y hora una semana antes (`rezago_168h`) | MAE, RMSE, WAPE, R² y sesgo | Serie real frente a predicción, resumen horario y JSON de métricas |
+| P2 | Persistencia del saldo de la hora anterior respecto de la capacidad | Precision, recall, F1, balanced accuracy y average precision | Matriz de confusión, riesgo diario y JSON de métricas |
+| P3 | K-Means con `k=4` sobre perfiles horarios estandarizados | Silhouette, Davies-Bouldin, Calinski-Harabasz e inercia | Mapa de clusters, curvas horarias, tabla de estaciones y modelo |
 
 ## Estructura
 
@@ -55,7 +82,7 @@ uv pip install -r requirements.txt
 │   ├── raw/                 CSV originales descargados
 │   └── processed/           viajes.parquet y estaciones.parquet
 ├── models/                  modelos entrenados, no se versionan
-├── notebooks/               solo exploración: 1.0-iniciales-descripcion.ipynb
+├── notebooks/               solo exploración: 1.0-dcc-exploracion-inicial.ipynb
 ├── references/              manifiesto de datos, ML Canvas y diagrama de arquitectura
 ├── reports/figures/         figuras generadas
 └── mibici/
@@ -63,9 +90,12 @@ uv pip install -r requirements.txt
     ├── dataset.py           ingesta reproducible
     ├── features.py          ingeniería de variables
     ├── modeling/
-    │   ├── train.py
+    │   ├── artifacts.py      gráficas y tablas registradas en MLflow
+    │   ├── baselines.py      reglas base y métricas de P1, P2 y P3
+    │   ├── train.py          CLI y tracking de los tres runs
     │   └── predict.py
     └── plots.py
+└── tests/                   pruebas de configuración y baselines
 ```
 
 ## Flujo de trabajo con Git

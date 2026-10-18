@@ -66,9 +66,13 @@ Con este umbral, el 4.0 % de las observaciones queda en riesgo. Las estaciones 9
 
 **P3. Perfil de uso por estación.** Sin variable objetivo. Cada estación se describe con la proporción de sus salidas en cada hora del día, la proporción de uso en fin de semana y la razón entre viajes que salen y viajes que llegan, calculadas solo con el periodo de entrenamiento.
 
-### Un punto pendiente para el equipo
+### Tratamiento de viajes espurios
 
-Hay 81,947 viajes de menos de un minuto que terminan en la misma estación donde empezaron, el 3.6 % del total. Lo más probable es que sean préstamos fallidos o devoluciones inmediatas, no viajes reales. La ingesta los conserva porque son registros válidos del archivo; conviene decidir en `features.py` si se excluyen del conteo de demanda de P1 y del saldo de P2.
+Hay 81,947 viajes de menos de un minuto que terminan en la misma estación donde empezaron,
+el 3.6 % del total. Se interpretan como préstamos fallidos o devoluciones inmediatas, no
+como viajes reales. La ingesta los conserva para mantener fidelidad respecto de la fuente,
+pero `features.py` los excluye antes de construir P1, P2 y P3. De esta manera, la regla queda
+documentada, es reproducible y no altera los archivos crudos.
 
 ## Condiciones de uso y datos personales
 
