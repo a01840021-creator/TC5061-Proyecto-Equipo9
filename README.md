@@ -7,7 +7,7 @@ Proyecto integrador del equipo 9. Propone y construye una solución de Machine L
 | Matrícula | Nombre | Contribución |
 | --- | --- | --- |
 | A01840021 | Carrera Rojas, Mariana Judith | Configuración inicial: estructura con Cookiecutter Data Science, repositorio en GitHub y protección de la rama principal |
-| A01797854 | Barrera Mendoza, José Manuel | Dependencias con versión fija, ingesta reproducible y versionado de datos, flujo de trabajo con Git |
+| A01797854 | Barrera Mendoza, José Manuel | Formulación del problema y ML Canvas, definición de los datos, dependencias con versión fija, ingesta reproducible y versionado de datos, flujo de trabajo con Git |
 | A01797868 | Barranco Cruz, Luis Fernando | Por definir |
 | A01840136 | Carrera Castillo, David | Por definir |
 
