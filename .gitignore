@@ -201,3 +201,7 @@ models/*
 *.pkl
 *.joblib
 *.skops
+
+# Datos de MiBici fuera de data/
+*.parquet
+datos_abiertos_*.csv
