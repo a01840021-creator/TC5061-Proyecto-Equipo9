@@ -1,6 +1,6 @@
 # ML Canvas y formulación del problema
 
-Proyecto MiBici, equipo 9. Este documento formula las tres preguntas del proyecto como problemas de Machine Learning y las reúne en un ML Canvas (Dorard, 2018). Las cifras provienen de la ingesta de abril a septiembre de 2026 (`references/definicion_datos.md`).
+Proyecto MiBici, equipo 9. Este documento formula las tres preguntas del proyecto como problemas de Machine Learning y las reúne en un ML Canvas (Dorard, 2018). Las cifras provienen de la ingesta de abril a septiembre de 2026 y de los conjuntos que construye `mibici/features.py` después de quitar los viajes espurios (`references/definicion_datos.md`).
 
 ## Formulación de las preguntas
 
@@ -12,7 +12,7 @@ Proyecto MiBici, equipo 9. Este documento formula las tres preguntas del proyect
 | **Tipo de tarea** | Regresión |
 | **Granularidad** | Estación por hora |
 | **Horizonte** | Las 24 horas del día siguiente, con la información disponible al cierre del día anterior |
-| **Por qué es relevante** | La demanda no se reparte igual entre estaciones ni entre horas: en los días en que tiene actividad, una estación inicia en promedio 30 viajes, pero en el 61 % de las combinaciones estación y hora no sale ningún viaje. Saber dónde y cuándo se concentrará la demanda es la base para distribuir la flota |
+| **Por qué es relevante** | La demanda no se reparte igual entre estaciones ni entre horas: en los días en que tiene actividad, una estación inicia en promedio 29 viajes, pero en el 61.9 % de las combinaciones estación y hora del tablón de P1 no sale ningún viaje (ambas cifras sin viajes espurios). Saber dónde y cuándo se concentrará la demanda es la base para distribuir la flota |
 | **Quién lo usa** | El operador del sistema |
 | **Qué decisión toma** | Cuántas bicicletas dejar en cada estación al inicio del día y en qué franjas reforzar la operación |
 
@@ -28,14 +28,14 @@ Proyecto MiBici, equipo 9. Este documento formula las tres preguntas del proyect
 | **Quién lo usa** | El equipo de rebalanceo |
 | **Qué decisión toma** | A qué estaciones mandar el camión en las próximas dos horas y si debe llevar o retirar bicicletas |
 
-**Cómo se aproxima el riesgo.** MiBici no publica cuántas bicicletas hay en cada estación, así que el inventario no se puede observar. Lo que sí se observa es su variación: cada viaje que llega suma una bicicleta a la estación de destino y cada viaje que sale resta una a la de origen. El **saldo neto** de una ventana (llegadas menos salidas) es exactamente el cambio de inventario en ese lapso.
+**Cómo se aproxima el riesgo.** MiBici no publica cuántas bicicletas hay en cada estación, así que el inventario no se puede observar. Lo que sí se observa es su variación: cada viaje que llega suma una bicicleta a la estación de destino y cada viaje que sale resta una a la de origen. El **saldo neto** de una ventana (llegadas menos salidas) es el cambio de inventario atribuible a los viajes registrados en ese lapso. No incluye las bicicletas que el operador agrega o retira al rebalancear, porque esos movimientos no aparecen en los datos de viajes; por eso es una aproximación del riesgo y no una medición del inventario.
 
 La etiqueta compara ese saldo con la capacidad de la estación:
 
 - **Riesgo de vaciarse:** en las dos horas siguientes salen más bicicletas de las que llegan, por al menos el 30 % de la capacidad.
 - **Riesgo de llenarse:** llegan más de las que salen, por al menos el 30 % de la capacidad.
 
-La variable objetivo vale 1 si ocurre cualquiera de los dos. Con este umbral, el 4.0 % de las combinaciones estación y ventana de dos horas queda marcado como riesgo: 1.9 % por vaciado y 2.1 % por llenado. Es una clase minoritaria pero no extrema, y la proporción entre los dos tipos de riesgo está equilibrada.
+La variable objetivo vale 1 si ocurre cualquiera de los dos. Con este umbral, en el tablón de P2 (abril a septiembre, sin viajes espurios) el 3.9 % de las combinaciones estación y ventana de dos horas queda marcado como riesgo: 1.8 % por vaciado y 2.1 % por llenado. En entrenamiento es 3.7 % y en prueba 5.0 %. Es una clase minoritaria pero no extrema, y la proporción entre los dos tipos de riesgo está equilibrada.
 
 El supuesto es que el operador mantiene las estaciones en un nivel intermedio, así que un movimiento neto del 30 % de la capacidad en dos horas es suficiente para llevarlas a un extremo. El umbral se puede ajustar sin cambiar la formulación.
 
@@ -46,12 +46,12 @@ El supuesto es que el operador mantiene las estaciones en un nivel intermedio, a
 | **Qué se agrupa** | Estaciones, según su perfil de uso |
 | **Tipo de tarea** | Clustering |
 | **Granularidad** | Una observación por estación, que resume su comportamiento en el periodo de entrenamiento |
-| **Horizonte** | No aplica. Los grupos describen el periodo observado; su estabilidad se verifica con el mes de prueba |
+| **Horizonte** | No aplica. Los grupos describen el periodo de entrenamiento, del 1 de abril al 31 de agosto |
 | **Por qué es relevante** | Dos estaciones con el mismo volumen pueden servir a viajes distintos: una de origen matutino en zona habitacional y otra de destino en zona de oficinas. Agruparlas por patrón, y no solo por volumen, revela cómo se usa el sistema en cada parte de la ciudad |
 | **Quién lo usa** | Planeación urbana y expansión del sistema |
 | **Qué decisión toma** | Dónde ampliar capacidad o abrir estaciones nuevas, y qué tipo de estación conviene en cada zona |
 
-El perfil de cada estación se construye con su distribución de salidas por hora del día, la proporción de uso entre semana y fin de semana, y su saldo entre viajes que salen y viajes que llegan. Los grupos se ubican en el mapa con las coordenadas de la nomenclatura.
+El perfil de cada estación se construye con su distribución de salidas por hora del día, la proporción de sus salidas en fin de semana y la proporción de salidas sobre el total de sus salidas y llegadas, todo con los viajes que inician antes del 1 de septiembre. Los grupos se ubican en el mapa con las coordenadas de la nomenclatura.
 
 ## ML Canvas
 
@@ -60,7 +60,7 @@ El perfil de cada estación se construye con su distribución de salidas por hor
 | **Propuesta de valor** | Anticipar la demanda y el desbalance de las estaciones de MiBici para que el operador asigne flota y camiones antes de que el problema ocurra, y entender cómo se usa el sistema en cada zona para planear su expansión |
 | **Tareas de predicción** | P1, regresión: viajes que inician por estación y hora. P2, clasificación: riesgo de vaciarse o llenarse en las dos horas siguientes. P3, clustering: grupos de estaciones por perfil de uso |
 | **Decisiones** | P1: distribución de bicicletas al inicio del día. P2: ruta y carga del camión de rebalanceo. P3: dónde ampliar o abrir estaciones |
-| **Simulación de impacto** | Se compara cada modelo contra una línea base simple en el mes de prueba. P1: reducción del error absoluto medio frente al promedio histórico. P2: proporción de estaciones en riesgo detectadas a tiempo frente a una regla de persistencia. P3: cohesión de los grupos y estabilidad al asignar el mes de prueba |
+| **Simulación de impacto** | P1 y P2 se comparan contra una línea base simple en el mes de prueba. P1: reducción del error absoluto medio frente al rezago semanal (la demanda de la misma estación y hora una semana antes). P2: proporción de estaciones en riesgo detectadas a tiempo frente a una regla de persistencia. P3: cohesión y separación de los grupos en el periodo de entrenamiento (silhouette, Davies-Bouldin y Calinski-Harabasz) |
 | **Cómo se generan las predicciones** | P1, una vez al día al cierre de operación, para las 24 horas siguientes. P2, cada hora, para las dos horas siguientes. P3, por lote al cierre de cada periodo de análisis |
 | **Recolección de datos** | MiBici publica un archivo de viajes por mes. Cada mes nuevo se incorpora con la misma ingesta y queda registrado con su hash en el manifiesto de datos |
 | **Fuentes de datos** | Viajes mensuales de abril a septiembre de 2026 y nomenclatura de estaciones de septiembre de 2026, del portal de datos abiertos de MiBici |
