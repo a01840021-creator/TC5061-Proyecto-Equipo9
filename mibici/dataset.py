@@ -16,6 +16,8 @@ from mibici.config import (
     MANIFIESTO_DATOS,
     PROCESSED_DATA_DIR,
     RAW_DATA_DIR,
+    RUTA_ESTACIONES,
+    RUTA_VIAJES,
     URL_NOMENCLATURA,
     URLS_VIAJES,
 )
@@ -254,8 +256,8 @@ def ejecutar() -> None:
         )
 
     PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-    viajes.to_parquet(PROCESSED_DATA_DIR / "viajes.parquet", index=False)
-    estaciones.to_parquet(PROCESSED_DATA_DIR / "estaciones.parquet", index=False)
+    viajes.to_parquet(RUTA_VIAJES, index=False)
+    estaciones.to_parquet(RUTA_ESTACIONES, index=False)
 
     version = escribir_manifiesto(archivos)
 
