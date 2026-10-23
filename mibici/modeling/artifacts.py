@@ -53,7 +53,7 @@ def grafica_p2(y_true: np.ndarray, y_pred: np.ndarray, destino: Path) -> None:
     ConfusionMatrixDisplay(matriz, display_labels=["Sin riesgo", "Con riesgo"]).plot(
         ax=ax, cmap="Blues", colorbar=False
     )
-    ax.set_title("P2 · Matriz de confusión del baseline")
+    ax.set_title("P2 · Matriz de confusión")
     fig.tight_layout()
     fig.savefig(destino, dpi=160, bbox_inches="tight")
     plt.close(fig)
