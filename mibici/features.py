@@ -1,6 +1,3 @@
-from pathlib import Path
-from typing import Tuple
-
 from loguru import logger
 import numpy as np
 import pandas as pd
@@ -16,7 +13,7 @@ ESTACIONES_CAPACIDAD_CERO = [99, 109, 116, 138]
 FECHA_CORTE_TEST = "2026-09-01"
 
 
-def cargar_datos_procesados() -> Tuple[pd.DataFrame, pd.DataFrame]:
+def cargar_datos_procesados() -> tuple[pd.DataFrame, pd.DataFrame]:
     """Carga los DataFrames procesados de viajes y estaciones desde Parquet."""
     ruta_viajes = PROCESSED_DATA_DIR / "viajes.parquet"
     ruta_estaciones = PROCESSED_DATA_DIR / "estaciones.parquet"
@@ -170,19 +167,22 @@ def generar_dataset_p2(
     df_p2["salidas_lag1"] = df_p2.groupby("estacion_id")["salidas"].shift(1)
     df_p2["llegadas_lag1"] = df_p2.groupby("estacion_id")["llegadas"].shift(1)
     df_p2["saldo_lag1"] = df_p2.groupby("estacion_id")["saldo_t"].shift(1)
-    df_p2["saldo_media_3h"] = (
-        df_p2.groupby("estacion_id")["saldo_t"]
-        .transform(lambda s: s.rolling(window=3, min_periods=3).mean())
+    df_p2["saldo_media_3h"] = df_p2.groupby("estacion_id")["saldo_t"].transform(
+        lambda s: s.rolling(window=3, min_periods=3).mean()
     )
 
     df_p2["hora"] = df_p2["fecha_hora"].dt.hour
     df_p2["dia_semana"] = df_p2["fecha_hora"].dt.dayofweek
     df_p2["es_fin_de_semana"] = df_p2["dia_semana"].isin([5, 6]).astype(int)
 
-    df_p2 = df_p2.dropna(subset=["saldo_futuro_2h", "salidas_lag1", "saldo_media_3h"]).reset_index(drop=True)
+    df_p2 = df_p2.dropna(subset=["saldo_futuro_2h", "salidas_lag1", "saldo_media_3h"]).reset_index(
+        drop=True
+    )
 
     # Descartar las 2 ultimas horas de agosto para que el target no use septiembre en train
-    fuga = (df_p2["fecha_hora"] >= "2026-08-31 22:00:00") & (df_p2["fecha_hora"] < "2026-09-01 00:00:00")
+    fuga = (df_p2["fecha_hora"] >= "2026-08-31 22:00:00") & (
+        df_p2["fecha_hora"] < "2026-09-01 00:00:00"
+    )
     return df_p2[~fuga].reset_index(drop=True)
 
 
@@ -200,10 +200,14 @@ def generar_dataset_p3(
     viajes_limpios = filtrar_viajes_invalidos(viajes)
 
     if solo_train:
-        viajes_limpios = viajes_limpios[viajes_limpios["inicio_del_viaje"] < FECHA_CORTE_TEST].copy()
+        viajes_limpios = viajes_limpios[
+            viajes_limpios["inicio_del_viaje"] < FECHA_CORTE_TEST
+        ].copy()
 
     viajes_limpios["hora"] = viajes_limpios["inicio_del_viaje"].dt.hour
-    viajes_limpios["es_fds"] = viajes_limpios["inicio_del_viaje"].dt.dayofweek.isin([5, 6]).astype(int)
+    viajes_limpios["es_fds"] = (
+        viajes_limpios["inicio_del_viaje"].dt.dayofweek.isin([5, 6]).astype(int)
+    )
 
     # 1. Distribucion de salidas en las 24 horas
     salidas_h = viajes_limpios.groupby(["origen_id", "hora"]).size().unstack(fill_value=0)
@@ -233,7 +237,7 @@ def particionar_temporalmente(
     df: pd.DataFrame,
     columna_fecha: str = "fecha_hora",
     fecha_corte: str = FECHA_CORTE_TEST,
-) -> Tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Divide un DataFrame en entrenamiento y prueba segun la fecha de corte."""
     corte = pd.Timestamp(fecha_corte)
     train = df[df[columna_fecha] < corte].copy()

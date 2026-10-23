@@ -13,7 +13,14 @@ import mlflow.sklearn
 import pandas as pd
 import typer
 
-from mibici.config import FECHA_FIN, FECHA_INICIO, PROJ_ROOT, SEMILLA
+from mibici.config import (
+    FECHA_FIN,
+    FECHA_INICIO,
+    MLFLOW_EXPERIMENT_NAME,
+    MLFLOW_TRACKING_URI,
+    PROJ_ROOT,
+    SEMILLA,
+)
 from mibici.dataset import leer_version_datos
 from mibici.features import (
     cargar_datos_procesados,
@@ -37,10 +44,10 @@ from mibici.modeling.baselines import (
 )
 
 app = typer.Typer(add_completion=False)
-EXPERIMENTO = "mibici-equipo09"
+EXPERIMENTO = MLFLOW_EXPERIMENT_NAME
 FECHA_CORTE = "2026-09-01"
 AUTOR = "Luis Fernando Barranco Cruz (A01797868)"
-TRACKING_URI_DEFAULT = f"sqlite:///{(PROJ_ROOT / 'mlflow.db').as_posix()}"
+TRACKING_URI_DEFAULT = MLFLOW_TRACKING_URI
 
 
 def obtener_commit_git() -> str:
@@ -71,6 +78,10 @@ def etiquetas_comunes(pregunta: str) -> dict[str, str]:
         "autor": AUTOR,
         "git_commit": obtener_commit_git(),
         "tipo_modelo": "baseline",
+        "team": "09",
+        "question": pregunta,
+        "model_family": "baseline",
+        "stage_of_work": "baseline",
     }
 
 
@@ -198,7 +209,7 @@ def main(
         "all", "--pregunta", "-p", help="Baseline a ejecutar: P1, P2, P3 o all."
     ),
     tracking_uri: str = typer.Option(
-        TRACKING_URI_DEFAULT, help="URI del backend SQLite de MLflow."
+        TRACKING_URI_DEFAULT, help="URI HTTP del servidor local de MLflow."
     ),
     experiment_name: str = typer.Option(EXPERIMENTO, help="Nombre del experimento."),
     umbral_riesgo: float = typer.Option(0.30, min=0.01, max=1.0),

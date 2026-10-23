@@ -8,7 +8,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    confusion_matrix,
+    precision_recall_curve,
+)
 
 
 def grafica_p1(
@@ -50,6 +54,44 @@ def grafica_p2(y_true: np.ndarray, y_pred: np.ndarray, destino: Path) -> None:
         ax=ax, cmap="Blues", colorbar=False
     )
     ax.set_title("P2 · Matriz de confusión del baseline")
+    fig.tight_layout()
+    fig.savefig(destino, dpi=160, bbox_inches="tight")
+    plt.close(fig)
+
+
+def grafica_residuales_p1(y_true: np.ndarray, y_pred: np.ndarray, destino: Path) -> None:
+    """Guarda una muestra de residuales para diagnosticar sesgo y heterocedasticidad."""
+    residuales = y_true - y_pred
+    paso = max(len(y_true) // 20_000, 1)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.scatter(y_pred[::paso], residuales[::paso], s=8, alpha=0.25)
+    ax.axhline(0, color="black", linewidth=1)
+    ax.set(
+        title="P1 · Residuales del modelo candidato",
+        xlabel="Demanda predicha",
+        ylabel="Real - predicción",
+    )
+    ax.grid(alpha=0.2)
+    fig.tight_layout()
+    fig.savefig(destino, dpi=160, bbox_inches="tight")
+    plt.close(fig)
+
+
+def grafica_precision_recall_p2(y_true: np.ndarray, score: np.ndarray, destino: Path) -> None:
+    """Guarda la curva precisión-recall, apropiada para una clase desbalanceada."""
+    precision, recall, _ = precision_recall_curve(y_true, score)
+    fig, ax = plt.subplots(figsize=(7, 5))
+    ax.plot(recall, precision, linewidth=1.8)
+    ax.axhline(float(np.mean(y_true)), color="gray", linestyle="--", label="Prevalencia")
+    ax.set(
+        title="P2 · Curva precisión-recall",
+        xlabel="Recall",
+        ylabel="Precisión",
+        xlim=(0, 1),
+        ylim=(0, 1),
+    )
+    ax.grid(alpha=0.2)
+    ax.legend()
     fig.tight_layout()
     fig.savefig(destino, dpi=160, bbox_inches="tight")
     plt.close(fig)

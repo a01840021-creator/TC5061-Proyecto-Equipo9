@@ -41,6 +41,23 @@ FECHA_INICIO = "2026-04-01"
 FECHA_FIN = "2026-09-30"
 SEMILLA = 42
 
+# Configuracion central de MLflow. El servidor usa SQLite como backend, pero los
+# clientes se conectan por HTTP para habilitar Tracking y Model Registry.
+MLFLOW_EXPERIMENT_NAME = "mibici-equipo09"
+MLFLOW_TRACKING_URI = "http://127.0.0.1:5000"
+
+# Hiperparametros predeterminados de los modelos candidatos. Se mantienen aqui
+# para evitar repetirlos en MLproject y en los modulos de entrenamiento.
+P1_MODELO_DEFAULT = "hist_gradient_boosting"
+P2_MODELO_DEFAULT = "hist_gradient_boosting"
+P3_MODELO_DEFAULT = "kmeans"
+LEARNING_RATE_DEFAULT = 0.05
+MAX_ITER_DEFAULT = 150
+MAX_LEAF_NODES_DEFAULT = 31
+L2_REGULARIZATION_DEFAULT = 0.0
+N_CLUSTERS_DEFAULT = 5
+BATCH_SIZE_DEFAULT = 128
+
 # If tqdm is installed, configure loguru with tqdm.write
 # https://github.com/Delgan/loguru/issues/135
 try:

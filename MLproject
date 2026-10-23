@@ -6,11 +6,39 @@ entry_points:
   ingest:
     command: "python -m mibici.dataset"
 
-  train:
+  baseline:
     parameters:
       pregunta: {type: string, default: "all"}
-      tracking_uri: {type: string, default: "sqlite:///mlflow.db"}
-      experiment_name: {type: string, default: "mibici-equipo09"}
+    command: "python -m mibici.modeling.train --pregunta {pregunta}"
+
+  train:
+    parameters:
+      pregunta: {type: string}
+      modelo: {type: string, default: "auto"}
+      learning_rate: {type: float, default: 0.05}
+      max_iter: {type: int, default: 150}
+      max_leaf_nodes: {type: int, default: 31}
+      l2_regularization: {type: float, default: 0.0}
       umbral_riesgo: {type: float, default: 0.30}
-      n_clusters: {type: int, default: 4}
-    command: "python -m mibici.modeling.train --pregunta {pregunta} --tracking-uri {tracking_uri} --experiment-name {experiment_name} --umbral-riesgo {umbral_riesgo} --n-clusters {n_clusters}"
+      n_clusters: {type: int, default: 5}
+      batch_size: {type: int, default: 128}
+    command: >-
+      python -m mibici.modeling.candidates train
+      --pregunta {pregunta}
+      --modelo {modelo}
+      --learning-rate {learning_rate}
+      --max-iter {max_iter}
+      --max-leaf-nodes {max_leaf_nodes}
+      --l2-regularization {l2_regularization}
+      --umbral-riesgo {umbral_riesgo}
+      --n-clusters {n_clusters}
+      --batch-size {batch_size}
+
+  search:
+    parameters:
+      pregunta: {type: string}
+      umbral_riesgo: {type: float, default: 0.30}
+    command: >-
+      python -m mibici.modeling.candidates search
+      --pregunta {pregunta}
+      --umbral-riesgo {umbral_riesgo}
