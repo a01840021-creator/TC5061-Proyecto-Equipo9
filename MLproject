@@ -42,3 +42,14 @@ entry_points:
       python -m mibici.modeling.candidates search
       --pregunta {pregunta}
       --umbral-riesgo {umbral_riesgo}
+
+  register:
+    parameters:
+      p1_run_id: {type: string}
+      p2_run_id: {type: string}
+      p3_run_id: {type: string}
+    command: >-
+      python -m mibici.modeling.registry
+      --p1-run-id {p1_run_id}
+      --p2-run-id {p2_run_id}
+      --p3-run-id {p3_run_id}

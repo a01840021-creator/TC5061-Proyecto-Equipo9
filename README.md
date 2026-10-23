@@ -104,9 +104,9 @@ mlflow run . -e train -P pregunta=p1 -P modelo=hist_gradient_boosting \
   -P learning_rate=0.05 -P max_iter=150 -P max_leaf_nodes=31
 
 # Búsqueda organizada como un run padre y tres runs hijos
-mlflow run . -e search -P pregunta=p1
-mlflow run . -e search -P pregunta=p2
-mlflow run . -e search -P pregunta=p3
+mlflow run . --experiment-name mibici-equipo09 -e search -P pregunta=p1
+mlflow run . --experiment-name mibici-equipo09 -e search -P pregunta=p2
+mlflow run . --experiment-name mibici-equipo09 -e search -P pregunta=p3
 ```
 
 Durante desarrollo puede añadirse `--env-manager local` a cada comando para
@@ -136,6 +136,26 @@ Cada candidato registra:
 - gráficas en `plots/`;
 - configuración efectiva en `config/`;
 - parámetros, métricas de validación y métricas de prueba.
+
+### 4. Model Registry y alias de producción
+
+El equipo utiliza aliases, esquema vigente de MLflow, en lugar de las etapas
+clásicas `Staging` y `Production`, que están obsoletas. El alias `champion`
+identifica la versión aprobada para producción y conserva el linaje hacia la
+corrida, el commit y la versión de datos.
+
+```bash
+mlflow run . --experiment-name mibici-equipo09 -e register \
+  -P p1_run_id=43ba9b881abd4b0bb4cc7188f98eb3ad \
+  -P p2_run_id=91d87b354adf4612b258ea19342d2577 \
+  -P p3_run_id=96b2a3ba470048a6aea3ea756f1a6f14 \
+  --env-manager local
+```
+
+El punto de entrada es idempotente: si una versión ya proviene de la misma
+corrida, reutiliza esa versión en lugar de crear un duplicado. Finalmente carga
+los tres modelos mediante `models:/<nombre>@champion` para verificar que están
+disponibles.
 
 ### Experimento base
 
