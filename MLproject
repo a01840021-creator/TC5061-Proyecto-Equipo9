@@ -1,0 +1,16 @@
+name: mibici-equipo09
+
+python_env: python_env.yaml
+
+entry_points:
+  ingest:
+    command: "python -m mibici.dataset"
+
+  train:
+    parameters:
+      pregunta: {type: string, default: "all"}
+      tracking_uri: {type: string, default: "sqlite:///mlflow.db"}
+      experiment_name: {type: string, default: "mibici-equipo09"}
+      umbral_riesgo: {type: float, default: 0.30}
+      n_clusters: {type: int, default: 4}
+    command: "python -m mibici.modeling.train --pregunta {pregunta} --tracking-uri {tracking_uri} --experiment-name {experiment_name} --umbral-riesgo {umbral_riesgo} --n-clusters {n_clusters}"
