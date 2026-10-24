@@ -65,6 +65,103 @@ python -m pip install -r requirements.txt
 | `mlflow ui --backend-store-uri sqlite:///mlflow.db --host 127.0.0.1 --port 5000` | Abre la interfaz local de MLflow |
 | `python -m pytest -q tests` | Ejecuta las pruebas automatizadas |
 
+## MLflow Project y tracking avanzado
+
+### 1. Levantar el servidor local
+
+El backend SQLite permite usar Tracking y Model Registry. Desde la raíz del
+repositorio, con el entorno activado, se ejecuta:
+
+```bash
+mlflow server \
+  --backend-store-uri sqlite:///mlflow.db \
+  --default-artifact-root ./mlartifacts \
+  --host 127.0.0.1 \
+  --port 5000
+```
+
+El servidor permanece abierto en esa terminal. En una segunda terminal:
+
+```bash
+conda activate mibici-equipo9
+cd ~/Documents/NLP/MLops/TC5061-Proyecto-Equipo9
+export MLFLOW_TRACKING_URI=http://127.0.0.1:5000
+```
+
+La interfaz queda disponible en <http://127.0.0.1:5000>. El archivo
+`mlflow.db`, los artefactos y los modelos locales están excluidos por
+`.gitignore`.
+
+### 2. Ejecutar el proyecto reproducible
+
+El archivo `MLproject` declara el entorno `python_env.yaml` y cuatro puntos de
+entrada. Las rutas, fechas y la semilla se leen de `mibici/config.py`.
+
+```bash
+# Ingesta completa de los seis meses
+mlflow run . -e ingest
+
+# Reproducir los tres baselines
+mlflow run . -e baseline -P pregunta=all
+
+# Ejecutar un único candidato
+mlflow run . -e train -P pregunta=p1 -P modelo=hist_gradient_boosting \
+  -P learning_rate=0.05 -P max_iter=150 -P max_leaf_nodes=31
+
+# Búsqueda organizada como un run padre y tres runs hijos
+mlflow run . --experiment-name mibici-equipo09 -e search -P pregunta=p1
+mlflow run . --experiment-name mibici-equipo09 -e search -P pregunta=p2
+mlflow run . --experiment-name mibici-equipo09 -e search -P pregunta=p3
+```
+
+Durante desarrollo puede añadirse `--env-manager local` a cada comando para
+usar el entorno Conda ya activado. Para comprobar la reproducibilidad desde un
+clon limpio se omite esa opción y MLflow crea el entorno declarado.
+
+### 3. Diseño de la experimentación
+
+- **P1:** `HistGradientBoostingRegressor` con combinaciones de tasa de
+  aprendizaje, iteraciones, hojas y regularización L2.
+- **P2:** `HistGradientBoostingClassifier` con pesos balanceados; se priorizan
+  recall, F1 y average precision debido al desbalance de la clase de riesgo.
+- **P3:** K-Means y MiniBatch K-Means con distintos valores de `k`; se comparan
+  silhouette, Davies-Bouldin, Calinski-Harabasz e inercia.
+
+Cada búsqueda crea un run padre (`stage_of_work=search`) y tres runs hijos
+(`stage_of_work=candidate`). Todos incluyen `question`, `model_family`, equipo,
+commit de Git y versión de datos. Agosto se usa como validación y septiembre
+como prueba; la selección se realiza con validación para no elegir un modelo a
+partir del conjunto de prueba.
+
+Cada candidato registra:
+
+- el modelo con firma y ejemplo de entrada;
+- el manifiesto y metadatos del conjunto de entrenamiento mediante
+  `mlflow.log_input`;
+- gráficas en `plots/`;
+- configuración efectiva en `config/`;
+- parámetros, métricas de validación y métricas de prueba.
+
+### 4. Model Registry y alias de producción
+
+El equipo utiliza aliases, esquema vigente de MLflow, en lugar de las etapas
+clásicas `Staging` y `Production`, que están obsoletas. El alias `champion`
+identifica la versión aprobada para producción y conserva el linaje hacia la
+corrida, el commit y la versión de datos.
+
+```bash
+mlflow run . --experiment-name mibici-equipo09 -e register \
+  -P p1_run_id=43ba9b881abd4b0bb4cc7188f98eb3ad \
+  -P p2_run_id=02fb26c11c364cdda19379709dfce0d0 \
+  -P p3_run_id=96b2a3ba470048a6aea3ea756f1a6f14 \
+  --env-manager local
+```
+
+El punto de entrada es idempotente: si una versión ya proviene de la misma
+corrida, reutiliza esa versión en lugar de crear un duplicado. Finalmente carga
+los tres modelos mediante `models:/<nombre>@champion` para verificar que están
+disponibles.
+
 ### Experimento base
 
 Todos los runs se agrupan en el experimento `mibici-equipo09` y registran el rango de

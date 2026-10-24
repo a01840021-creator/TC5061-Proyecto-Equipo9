@@ -93,6 +93,10 @@ def etiquetas_comunes(pregunta: str) -> dict[str, str]:
         "autor": obtener_autor(),
         "git_commit": obtener_commit_git(),
         "tipo_modelo": "baseline",
+        "team": "09",
+        "question": pregunta,
+        "model_family": "baseline",
+        "stage_of_work": "baseline",
     }
 
 
@@ -220,7 +224,7 @@ def main(
         "all", "--pregunta", "-p", help="Baseline a ejecutar: P1, P2, P3 o all."
     ),
     tracking_uri: str = typer.Option(
-        TRACKING_URI_DEFAULT, help="URI del backend SQLite de MLflow."
+        TRACKING_URI_DEFAULT, help="URI HTTP del servidor local de MLflow."
     ),
     experiment_name: str = typer.Option(EXPERIMENTO, help="Nombre del experimento."),
     umbral_riesgo: float = typer.Option(UMBRAL_RIESGO_P2, min=0.01, max=1.0),

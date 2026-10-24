@@ -1,0 +1,55 @@
+name: mibici-equipo09
+
+python_env: python_env.yaml
+
+entry_points:
+  ingest:
+    command: "python -m mibici.dataset"
+
+  baseline:
+    parameters:
+      pregunta: {type: string, default: "all"}
+    command: "python -m mibici.modeling.train --pregunta {pregunta}"
+
+  train:
+    parameters:
+      pregunta: {type: string}
+      modelo: {type: string, default: "auto"}
+      learning_rate: {type: float, default: 0.05}
+      max_iter: {type: int, default: 150}
+      max_leaf_nodes: {type: int, default: 31}
+      l2_regularization: {type: float, default: 0.0}
+      umbral_riesgo: {type: float, default: 0.30}
+      n_clusters: {type: int, default: 5}
+      batch_size: {type: int, default: 128}
+    command: >-
+      python -m mibici.modeling.candidates train
+      --pregunta {pregunta}
+      --modelo {modelo}
+      --learning-rate {learning_rate}
+      --max-iter {max_iter}
+      --max-leaf-nodes {max_leaf_nodes}
+      --l2-regularization {l2_regularization}
+      --umbral-riesgo {umbral_riesgo}
+      --n-clusters {n_clusters}
+      --batch-size {batch_size}
+
+  search:
+    parameters:
+      pregunta: {type: string}
+      umbral_riesgo: {type: float, default: 0.30}
+    command: >-
+      python -m mibici.modeling.candidates search
+      --pregunta {pregunta}
+      --umbral-riesgo {umbral_riesgo}
+
+  register:
+    parameters:
+      p1_run_id: {type: string}
+      p2_run_id: {type: string}
+      p3_run_id: {type: string}
+    command: >-
+      python -m mibici.modeling.registry
+      --p1-run-id {p1_run_id}
+      --p2-run-id {p2_run_id}
+      --p3-run-id {p3_run_id}

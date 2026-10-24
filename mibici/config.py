@@ -84,4 +84,20 @@ N_INIT_KMEANS = 20
 
 # MLflow
 EXPERIMENTO = "mibici-equipo09"
-TRACKING_URI_DEFAULT = f"sqlite:///{(PROJ_ROOT / 'mlflow.db').as_posix()}"
+MLFLOW_EXPERIMENT_NAME = EXPERIMENTO
+MLFLOW_TRACKING_URI = os.getenv(
+    "MLFLOW_TRACKING_URI",
+    "http://127.0.0.1:5000",
+)
+TRACKING_URI_DEFAULT = MLFLOW_TRACKING_URI
+
+# Hiperparámetros predeterminados de los modelos candidatos
+P1_MODELO_DEFAULT = "hist_gradient_boosting"
+P2_MODELO_DEFAULT = "hist_gradient_boosting"
+P3_MODELO_DEFAULT = "kmeans"
+LEARNING_RATE_DEFAULT = 0.05
+MAX_ITER_DEFAULT = 150
+MAX_LEAF_NODES_DEFAULT = 31
+L2_REGULARIZATION_DEFAULT = 0.0
+N_CLUSTERS_DEFAULT = 5
+BATCH_SIZE_DEFAULT = 128

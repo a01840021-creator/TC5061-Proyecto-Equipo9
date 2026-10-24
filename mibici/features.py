@@ -121,6 +121,7 @@ def generar_dataset_p1(
     df_p1["hora"] = df_p1["fecha_hora"].dt.hour
     df_p1["dia_semana"] = df_p1["fecha_hora"].dt.dayofweek
     df_p1["es_fin_de_semana"] = df_p1["dia_semana"].isin([5, 6]).astype(int)
+    df_p1["mes"] = df_p1["fecha_hora"].dt.month
 
     # Rezagos de al menos 24 horas: disponibles al cierre del día anterior
     df_p1["rezago_24h"] = df_p1.groupby("estacion_id")["demanda"].shift(24)
