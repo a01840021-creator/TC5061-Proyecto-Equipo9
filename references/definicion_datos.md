@@ -1,6 +1,6 @@
 # Definición de los datos
 
-Proyecto MiBici, equipo 9. Cubre el rango de fechas, la fuente, el tamaño real, las variables y la construcción de cada variable objetivo, las condiciones de uso y la estrategia de partición. Las cifras salen de la ingesta (`make data`), versión de datos `0c4b34e5425a`.
+Proyecto MiBici, equipo 9. Cubre el rango de fechas, la fuente, el tamaño real, las variables y la construcción de cada variable objetivo, las condiciones de uso y la estrategia de partición. Las cifras salen de la ingesta (`make data`), versión de datos `0c4b34e5425a`; las que dependen del filtro de viajes espurios salen de los conjuntos que construye `mibici/features.py`, y en cada caso se indica a qué conjunto se refieren.
 
 ## Rango de fechas
 
@@ -8,11 +8,11 @@ Proyecto MiBici, equipo 9. Cubre el rango de fechas, la fuente, el tamaño real,
 
 - Son los seis meses más recientes publicados al momento de la ingesta.
 - Terminan en el mismo mes que la nomenclatura de estaciones disponible (septiembre de 2026). Así, cada viaje se puede ligar con la capacidad y la ubicación vigentes de su estación, que P2 y P3 necesitan.
-- Seis meses dan más de dos millones de viajes y cubren cambios de temporada, como el regreso a clases de septiembre, sin volver inmanejable el procesamiento en una computadora personal.
+- Seis meses dan más de dos millones de viajes y cubren cambios de temporada, como el aumento de viajes de septiembre, sin volver inmanejable el procesamiento en una computadora personal.
 
 ## Fuente
 
-Portal de [datos abiertos de MiBici](https://mibici.net/es/datos-abiertos/). Las URLs exactas también están en `mibici/config.py`.
+Portal de [datos abiertos de MiBici](https://mibici.net/es/datos-abiertos/) (MiBici, s. f.-a). Las URLs exactas también están en `mibici/config.py`.
 
 | Archivo | URL |
 | --- | --- |
@@ -53,7 +53,7 @@ Se descartan en la ingesta `usuario_id`, `genero` y `anio_de_nacimiento` (ver co
 
 ## Construcción de las variables objetivo
 
-**P1. Viajes que inician por estación y hora.** Se agrupan los viajes por `origen_id` y por la hora de `inicio_del_viaje` truncada a la hora. Las combinaciones sin viajes se completan con cero, porque una hora sin salidas es una observación válida y no un faltante: el 61 % de las combinaciones estación y hora vale cero.
+**P1. Viajes que inician por estación y hora.** Se agrupan los viajes por `origen_id` y por la hora de `inicio_del_viaje` truncada a la hora. Las combinaciones sin viajes se completan con cero, porque una hora sin salidas es una observación válida y no un faltante. En el tablón de P1 (484 estaciones, del 8 de abril al 30 de septiembre, sin viajes espurios), el 61.9 % de las combinaciones estación y hora vale cero: 63.3 % en entrenamiento y 55.3 % en prueba.
 
 **P2. Riesgo en las dos horas siguientes.** Para cada estación y cada hora *t*:
 
@@ -62,9 +62,9 @@ Se descartan en la ingesta `usuario_id`, `genero` y `anio_de_nacimiento` (ver co
 3. Saldo neto de la ventana: llegadas menos salidas en las horas *t+1* y *t+2*.
 4. La etiqueta vale 1 si el valor absoluto del saldo neto es al menos el 30 % de `dpcapacity`, y 0 en otro caso.
 
-Con este umbral, el 4.0 % de las observaciones queda en riesgo. Las estaciones 99, 109, 116 y 138 tienen capacidad cero en la nomenclatura y se excluyen de P2, porque su etiqueta no se puede calcular.
+En el tablón de P2 (480 estaciones, sin viajes espurios y sin las horas cuya ventana futura está incompleta), el 3.9 % de las observaciones queda en riesgo: 1.8 % por vaciado y 2.1 % por llenado. En entrenamiento la proporción es 3.7 % (1.7 % y 2.0 %) y en prueba 5.0 % (2.4 % y 2.6 %). Las estaciones 99, 109, 116 y 138 tienen capacidad cero en la nomenclatura y se excluyen de P2, porque su etiqueta no se puede calcular; el código las identifica en los datos con `dpcapacity == 0`.
 
-**P3. Perfil de uso por estación.** Sin variable objetivo. Cada estación se describe con la proporción de sus salidas en cada hora del día, la proporción de uso en fin de semana y la razón entre viajes que salen y viajes que llegan, calculadas solo con el periodo de entrenamiento.
+**P3. Perfil de uso por estación.** Sin variable objetivo. Cada estación se describe con la proporción de sus salidas en cada hora del día, la proporción de sus salidas en fin de semana y la proporción de salidas sobre el total de sus salidas y llegadas. Las tres se calculan con los viajes que inician antes del 1 de septiembre. Las estaciones sin salidas en ese periodo quedan con perfil horario cero y proporción de salidas de 0.5; el efecto que esto tiene en el agrupamiento se describe en `references/modelos_metricas.md`.
 
 ### Tratamiento de viajes espurios
 
@@ -76,7 +76,7 @@ documentada, es reproducible y no altera los archivos crudos.
 
 ## Condiciones de uso y datos personales
 
-El portal de datos abiertos no publica una licencia explícita de uso. El sitio indica "Todos los derechos reservados" y la operación del sistema está a cargo de la Agencia Metropolitana de Servicios de Infraestructura para la Movilidad del Área Metropolitana de Guadalajara (AMIM). Su aviso de privacidad remite a la Ley de Protección de Datos Personales en Posesión de Sujetos Obligados del Estado de Jalisco y sus Municipios, y a la ley general correspondiente, pero no se refiere a los datos abiertos de viajes.
+El portal de datos abiertos no publica una licencia explícita de uso. Su pie de página indica "Todos los derechos reservados" y señala que el sistema es operado por BKT Bici pública S.A. de C.V. y administrado por la Agencia Metropolitana de Servicios de Infraestructura para la Movilidad del Área Metropolitana de Guadalajara (MiBici, s. f.-a). Los términos y condiciones regulan la suscripción y el uso del servicio, y tampoco se refieren a los datos abiertos (MiBici, s. f.-b). El aviso de privacidad de la Agencia remite a la Ley de Protección de Datos Personales en Posesión de Sujetos Obligados del Estado de Jalisco y sus Municipios, y a la ley general correspondiente, pero no se refiere a los datos abiertos de viajes.
 
 Ante esa falta de licencia, el proyecto adopta un uso conservador:
 
@@ -93,19 +93,21 @@ Ante esa falta de licencia, el proyecto adopta un uso conservador:
 | Entrenamiento | 1 de abril al 31 de agosto de 2026 | 1,800,876 |
 | Prueba | 1 al 30 de septiembre de 2026 | 489,298 |
 
+Los viajes de la tabla son los de la ingesta. Después de quitar los viajes espurios quedan 1,736,571 en entrenamiento y 471,656 en prueba.
+
 Reglas para que ninguna variable use información del futuro:
 
 - **P1:** las variables del día *d* se calculan solo con datos hasta el cierre del día *d−1*: por ejemplo, las salidas de la misma hora el día anterior o el mismo día de la semana anterior.
 - **P2:** las variables de la hora *t* usan solo datos hasta *t*. La etiqueta usa *t+1* y *t+2*. Las ventanas cuya etiqueta cruza el 1 de septiembre se descartan del entrenamiento.
-- **P3:** los perfiles y los grupos se ajustan solo con el entrenamiento. Septiembre se asigna a los grupos ya formados para medir su estabilidad.
-- Cualquier escalamiento o imputación se ajusta con el entrenamiento y se aplica después a la prueba.
+- **P3:** los perfiles, el escalamiento y el agrupamiento se calculan con los viajes que inician entre el 1 de abril y el 31 de agosto. De ellos, 18 terminan el 1 de septiembre, entre las 00:00 y las 09:07, y su llegada cuenta en la proporción de salidas de su estación de destino. Son 18 de 1,736,571 viajes de entrenamiento: cambian esa proporción en 18 estaciones, en no más de 0.0002, ninguna estación cambia de grupo y la silhouette del run cambia en menos de una millonésima.
+- Los baselines de P1 y P2 no escalan ni imputan variables; el único escalamiento, el de P3, se ajusta con los perfiles de entrenamiento.
 
-Septiembre tiene 24 % más viajes que agosto, por el regreso a clases. Es una prueba exigente a propósito: mide si los modelos resisten un cambio de temporada, que es lo que encontrarán en operación.
+Septiembre tiene 24.3 % más viajes que agosto (489,298 frente a 393,524). Una explicación posible es el regreso a clases, pero estos datos no permiten comprobarla. Sea cual sea la causa, el mes de prueba es exigente: mide si los modelos resisten un cambio de volumen como los que encontrarán en operación.
 
 ## Referencias
 
-Agencia Metropolitana de Servicios de Infraestructura para la Movilidad del Área Metropolitana de Guadalajara. (s.f.). *Aviso de privacidad*. MiBici. https://mibici.net/es/aviso-de-privacidad/
+Agencia Metropolitana de Servicios de Infraestructura para la Movilidad del Área Metropolitana de Guadalajara. (s. f.). *Aviso de privacidad*. MiBici. https://mibici.net/es/aviso-de-privacidad/
 
-MiBici. (s.f.). *Datos abiertos* [Conjunto de datos]. Sistema de Bicicleta Pública del Área Metropolitana de Guadalajara. https://mibici.net/es/datos-abiertos/
+MiBici. (s. f.-a). *Datos abiertos* [Conjunto de datos]. Sistema de Bicicleta Pública del Área Metropolitana de Guadalajara. https://mibici.net/es/datos-abiertos/
 
-MiBici. (s.f.). *Términos y condiciones*. https://mibici.net/es/termino-y-condiciones/
+MiBici. (s. f.-b). *Términos y condiciones*. https://mibici.net/es/termino-y-condiciones/

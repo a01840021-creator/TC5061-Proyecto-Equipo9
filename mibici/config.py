@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+import os
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -6,15 +8,37 @@ from loguru import logger
 # Load environment variables from .env file if it exists
 load_dotenv()
 
+# If tqdm is installed, configure loguru with tqdm.write
+# https://github.com/Delgan/loguru/issues/135
+# Nivel INFO salvo que LOGURU_LEVEL diga otro, para que la ruta local de PROJ_ROOT,
+# que se registra en DEBUG, no aparezca en las salidas de los notebooks.
+# Con color salvo que LOGURU_COLORIZE lo desactive, para guardar notebooks sin códigos ANSI.
+try:
+    from tqdm import tqdm
+
+    logger.remove(0)
+    logger.add(
+        lambda msg: tqdm.write(msg, end=""),
+        colorize=os.getenv("LOGURU_COLORIZE", "True").strip().lower()
+        not in {"0", "false", "no", "off"},
+        level=os.getenv("LOGURU_LEVEL", "INFO"),
+    )
+except ModuleNotFoundError:
+    pass
+
 # Paths
 PROJ_ROOT = Path(__file__).resolve().parents[1]
-logger.info(f"PROJ_ROOT path is: {PROJ_ROOT}")
+logger.debug(f"PROJ_ROOT path is: {PROJ_ROOT}")
 
 DATA_DIR = PROJ_ROOT / "data"
 RAW_DATA_DIR = DATA_DIR / "raw"
 INTERIM_DATA_DIR = DATA_DIR / "interim"
 PROCESSED_DATA_DIR = DATA_DIR / "processed"
 EXTERNAL_DATA_DIR = DATA_DIR / "external"
+
+# Datos limpios que deja la ingesta y que leen P1, P2 y P3
+RUTA_VIAJES = PROCESSED_DATA_DIR / "viajes.parquet"
+RUTA_ESTACIONES = PROCESSED_DATA_DIR / "estaciones.parquet"
 
 MODELS_DIR = PROJ_ROOT / "models"
 
@@ -41,13 +65,33 @@ FECHA_INICIO = "2026-04-01"
 FECHA_FIN = "2026-09-30"
 SEMILLA = 42
 
-# Configuracion central de MLflow. El servidor usa SQLite como backend, pero los
-# clientes se conectan por HTTP para habilitar Tracking y Model Registry.
-MLFLOW_EXPERIMENT_NAME = "mibici-equipo09"
-MLFLOW_TRACKING_URI = "http://127.0.0.1:5000"
+# Un viaje más corto que esto que termina donde empezó es un préstamo fallido, no demanda
+DURACION_MINIMA_VIAJE_S = 60
 
-# Hiperparametros predeterminados de los modelos candidatos. Se mantienen aqui
-# para evitar repetirlos en MLproject y en los modulos de entrenamiento.
+# Partición temporal: entrenamiento hasta el día previo al corte, prueba desde el corte
+FECHA_CORTE = "2026-09-01"
+FECHA_FIN_TRAIN = (date.fromisoformat(FECHA_CORTE) - timedelta(days=1)).isoformat()
+PERIODO_TRAIN = f"{FECHA_INICIO}/{FECHA_FIN_TRAIN}"
+PERIODO_TEST = f"{FECHA_CORTE}/{FECHA_FIN}"
+
+# P2: hay riesgo si el saldo neto de las próximas horas alcanza esta fracción de la capacidad
+UMBRAL_RIESGO_P2 = 0.30
+HORIZONTE_P2_HORAS = 2
+
+# P3: agrupamiento K-Means
+N_CLUSTERS_P3 = 4
+N_INIT_KMEANS = 20
+
+# MLflow
+EXPERIMENTO = "mibici-equipo09"
+MLFLOW_EXPERIMENT_NAME = EXPERIMENTO
+MLFLOW_TRACKING_URI = os.getenv(
+    "MLFLOW_TRACKING_URI",
+    "http://127.0.0.1:5000",
+)
+TRACKING_URI_DEFAULT = MLFLOW_TRACKING_URI
+
+# Hiperparámetros predeterminados de los modelos candidatos
 P1_MODELO_DEFAULT = "hist_gradient_boosting"
 P2_MODELO_DEFAULT = "hist_gradient_boosting"
 P3_MODELO_DEFAULT = "kmeans"
@@ -57,13 +101,3 @@ MAX_LEAF_NODES_DEFAULT = 31
 L2_REGULARIZATION_DEFAULT = 0.0
 N_CLUSTERS_DEFAULT = 5
 BATCH_SIZE_DEFAULT = 128
-
-# If tqdm is installed, configure loguru with tqdm.write
-# https://github.com/Delgan/loguru/issues/135
-try:
-    from tqdm import tqdm
-
-    logger.remove(0)
-    logger.add(lambda msg: tqdm.write(msg, end=""), colorize=True)
-except ModuleNotFoundError:
-    pass

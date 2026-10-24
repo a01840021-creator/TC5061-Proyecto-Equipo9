@@ -202,11 +202,6 @@ models/*
 *.joblib
 *.skops
 
-# Entorno virtual Python 3.10
-.venv310/
-
-# Entornos virtuales locales
-.venv312-test/
-
-# Entorno virtual de pruebas SciPy
-.venv310-scipy-test/
+# Datos de MiBici fuera de data/
+*.parquet
+datos_abiertos_*.csv

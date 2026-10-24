@@ -22,15 +22,20 @@ Proyecto integrador del equipo 9. Propone y construye una solución de Machine L
 ## Datos
 
 - **Fuente:** [datos abiertos de MiBici](https://mibici.net/es/datos-abiertos/). Las URLs exactas de cada archivo están en `mibici/config.py`.
-- **Rango:** abril a septiembre de 2026. Termina en el mismo mes que la nomenclatura de estaciones (`nomenclatura_2026_09.csv`), para que todos los viajes correspondan a estaciones vigentes.
+- **Rango:** abril a septiembre de 2026. Termina en el mismo mes que la nomenclatura de estaciones (`nomenclatura_2026_09.csv`), para que la capacidad y la ubicación de cada estación correspondan al final del periodo. Las 484 estaciones de esa nomenclatura incluyen 14 cuyo nombre lleva el prefijo "ex-"; ninguna de ellas registra viajes entre abril y septiembre. La nomenclatura no explica el prefijo.
 - **Tamaño:** 2,294,886 registros crudos. Se eliminan 758 duplicados exactos y 3,954 viajes de dos estaciones (405 y 407) que no aparecen en la nomenclatura. Quedan **2,290,174 viajes** y **484 estaciones**.
 - **Datos personales:** se eliminan en la ingesta `usuario_id`, `genero` y `anio_de_nacimiento`. Ninguna de las tres preguntas los necesita y no se registran en MLflow ni en el repositorio.
-- **Partición:** temporal. Entrenamiento de abril a agosto y prueba en septiembre, para que ningún modelo se entrene con información posterior al periodo que predice.
+- **Partición:** temporal. Entrenamiento de abril a agosto y prueba en septiembre, para que ningún modelo se entrene con información posterior al periodo que predice. En P3, los perfiles se calculan con los viajes iniciados entre abril y agosto; 18 de ellos terminan el 1 de septiembre y sus llegadas cuentan en la proporción de salidas de 18 estaciones. La cambian en menos de 0.0002 y ninguna estación cambia de grupo por ello.
 - **Versionado:** `references/manifiesto_datos.json` guarda la URL, el número de registros y el hash SHA-256 de cada archivo crudo, y una `version_datos` que se registra como parámetro en cada run de MLflow.
 
 ## Instalación
 
-Requiere Python 3.10.
+Requiere Python 3.10. Primero se clona el repositorio:
+
+```bash
+git clone https://github.com/a01840021-creator/TC5061-Proyecto-Equipo9.git
+cd TC5061-Proyecto-Equipo9
+```
 
 Con `uv`:
 
@@ -169,6 +174,8 @@ partición y etiquetas con el equipo, la pregunta, el autor y el commit de Git.
 | P2 | Persistencia del saldo de la hora anterior respecto de la capacidad | Precision, recall, F1, balanced accuracy y average precision | Matriz de confusión, riesgo diario y JSON de métricas |
 | P3 | K-Means con `k=4` sobre perfiles horarios estandarizados | Silhouette, Davies-Bouldin, Calinski-Harabasz e inercia | Mapa de clusters, curvas horarias, tabla de estaciones y modelo |
 
+Los modelos candidatos de cada pregunta, la justificación de cada métrica según la decisión que apoya y los resultados de los baselines están en [`references/modelos_metricas.md`](references/modelos_metricas.md).
+
 ## Estructura
 
 ```
@@ -178,22 +185,39 @@ partición y etiquetas con el equipo, la pregunta, el autor y el commit de Git.
 ├── data/                    no se versiona
 │   ├── raw/                 CSV originales descargados
 │   └── processed/           viajes.parquet y estaciones.parquet
+├── docs/                    carpeta de la plantilla, sin contenido por ahora
 ├── models/                  modelos entrenados, no se versionan
 ├── notebooks/               solo exploración: 1.0-dcc-exploracion-inicial.ipynb
-├── references/              manifiesto de datos, ML Canvas y diagrama de arquitectura
+├── references/              manifiesto de datos, ML Canvas, definición de datos,
+│                            modelos y métricas, y diagrama de arquitectura
 ├── reports/figures/         figuras generadas
+├── tests/                   pruebas de configuración y baselines
 └── mibici/
-    ├── config.py            rutas, URLs, rango de fechas y semilla
+    ├── config.py            rutas, URLs, fechas, partición, umbrales, semilla y MLflow
     ├── dataset.py           ingesta reproducible
     ├── features.py          ingeniería de variables
     ├── modeling/
-    │   ├── artifacts.py      gráficas y tablas registradas en MLflow
-    │   ├── baselines.py      reglas base y métricas de P1, P2 y P3
-    │   ├── train.py          CLI y tracking de los tres runs
-    │   └── predict.py
-    └── plots.py
-└── tests/                   pruebas de configuración y baselines
+    │   ├── artifacts.py     gráficas y tablas registradas en MLflow
+    │   ├── baselines.py     reglas base y métricas de P1, P2 y P3
+    │   ├── train.py         CLI y tracking de los tres runs
+    │   └── predict.py       plantilla de Cookiecutter, sin usar
+    └── plots.py             plantilla de Cookiecutter, sin usar
 ```
+
+## Buenas prácticas
+
+| Ámbito | Práctica | Cómo y dónde se cumple |
+| --- | --- | --- |
+| MLflow Tracking | Un experimento por proyecto y runs con nombre descriptivo | Todos los runs van al experimento `mibici-equipo09`, definido en `EXPERIMENTO` de `mibici/config.py`. `mibici/modeling/train.py` nombra cada run: `P1_baseline_rezago_semanal`, `P2_baseline_persistencia_saldo` y `P3_baseline_kmeans_k4`. |
+| MLflow Tracking | Registrar lo necesario para reproducir el run | Cada run registra como parámetros `fecha_inicio`, `fecha_fin`, `periodo_train`, `periodo_test`, `version_datos` (del manifiesto) y `semilla`, además del modelo y sus hiperparámetros: `umbral_capacidad` y `horizonte_horas` en P2; `n_clusters` y `n_init` en P3. |
+| MLflow Tracking | Ligar cada run con su commit y su pregunta | Etiquetas `git_commit` (SHA de `git rev-parse HEAD`), `pregunta` (`P1`, `P2` o `P3`), `equipo`, `autor` y `tipo_modelo`. |
+| MLflow Tracking | Métricas con el conjunto en su nombre | Prefijo `test_` en P1 y P2, que se evalúan en septiembre (`test_mae`, `test_recall`), y `train_` en P3, que se evalúa sobre los perfiles de entrenamiento, calculados con los viajes iniciados entre abril y agosto (`train_silhouette`; ver [Datos](#datos) sobre los 18 que terminan el 1 de septiembre). |
+| MLflow Tracking | Sin credenciales ni datos de los usuarios de MiBici en parámetros, etiquetas o artefactos | La ingesta elimina `usuario_id`, `genero` y `anio_de_nacimiento`, las columnas con datos de los usuarios de MiBici, antes de guardar los Parquet (`mibici/dataset.py`), así que ningún artefacto puede contenerlas. La etiqueta `autor` registra tal cual el `user.name` de la configuración de Git de quien ejecuta o, si no está definido, el usuario del sistema (`obtener_autor` en `mibici/modeling/train.py`). El tracking es local y no usa credenciales; `.env` está en `.gitignore`. |
+| Estructura y código | Notebooks sólo para exploración, con la convención de nombres | `notebooks/1.0-dcc-exploracion-inicial.ipynb` sigue el formato `número-iniciales-descripción` e importa las funciones de `mibici.features`; la lógica final vive en el módulo `mibici/`. |
+| Estructura y código | Configuración en un solo lugar | Para el flujo de ingesta, construcción de variables y experimento, `mibici/config.py` concentra las carpetas de datos, las rutas de los Parquet procesados, las URLs, las fechas, el corte de partición, la duración mínima de un viaje válido, el umbral y el horizonte de P2, los hiperparámetros de K-Means, la semilla, el nombre del experimento y la URI de tracking. Los periodos que se registran en MLflow se derivan de esas constantes. El nombre local de cada CSV crudo se arma en `mibici/dataset.py` con la clave del mes. `mibici/modeling/predict.py` y `mibici/plots.py` son plantillas de Cookiecutter sin usar y conservan sus rutas de ejemplo. |
+| Estructura y código | Dependencias con versión fija y entorno reproducible | `requirements.txt` fija con `==` cada paquete; la instalación con Python 3.10 está en [Instalación](#instalación). |
+| Datos y Git | Ningún dato, modelo, carpeta de MLflow ni credencial en el historial | `.gitignore` excluye `/data/`, `*.parquet`, `datos_abiertos_*.csv`, `mlruns/`, `mlartifacts/`, `mlflow.db`, `models/*`, `*.pkl`, `*.joblib`, `*.skops` y `.env`. Los datos se versionan con su hash en `references/manifiesto_datos.json`, no con los archivos. |
+| Datos y Git | Todo cambio entra a `main` por Pull Request revisado | La rama `main` está protegida con un ruleset que exige un Pull Request con al menos una aprobación e impide el push directo y el borrado. Ver [Flujo de trabajo con Git](#flujo-de-trabajo-con-git). |
 
 ## Flujo de trabajo con Git
 

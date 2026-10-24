@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import gc
+import getpass
 import json
 from pathlib import Path
 import subprocess
@@ -14,12 +15,19 @@ import pandas as pd
 import typer
 
 from mibici.config import (
+    EXPERIMENTO,
+    FECHA_CORTE,
     FECHA_FIN,
     FECHA_INICIO,
-    MLFLOW_EXPERIMENT_NAME,
-    MLFLOW_TRACKING_URI,
+    HORIZONTE_P2_HORAS,
+    N_CLUSTERS_P3,
+    N_INIT_KMEANS,
+    PERIODO_TEST,
+    PERIODO_TRAIN,
     PROJ_ROOT,
     SEMILLA,
+    TRACKING_URI_DEFAULT,
+    UMBRAL_RIESGO_P2,
 )
 from mibici.dataset import leer_version_datos
 from mibici.features import (
@@ -44,10 +52,17 @@ from mibici.modeling.baselines import (
 )
 
 app = typer.Typer(add_completion=False)
-EXPERIMENTO = MLFLOW_EXPERIMENT_NAME
-FECHA_CORTE = "2026-09-01"
-AUTOR = "Luis Fernando Barranco Cruz (A01797868)"
-TRACKING_URI_DEFAULT = MLFLOW_TRACKING_URI
+
+
+def obtener_autor() -> str:
+    """Nombre de Git (`user.name`) de quien ejecuta; si no hay, el usuario del sistema."""
+    try:
+        nombre = subprocess.check_output(
+            ["git", "config", "user.name"], cwd=PROJ_ROOT, text=True
+        ).strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        nombre = ""
+    return nombre or getpass.getuser()
 
 
 def obtener_commit_git() -> str:
@@ -64,8 +79,8 @@ def parametros_comunes(version_datos: str) -> dict[str, str | int]:
     return {
         "fecha_inicio": FECHA_INICIO,
         "fecha_fin": FECHA_FIN,
-        "periodo_train": "2026-04-01/2026-08-31",
-        "periodo_test": "2026-09-01/2026-09-30",
+        "periodo_train": PERIODO_TRAIN,
+        "periodo_test": PERIODO_TEST,
         "version_datos": version_datos,
         "semilla": SEMILLA,
     }
@@ -75,7 +90,7 @@ def etiquetas_comunes(pregunta: str) -> dict[str, str]:
     return {
         "equipo": "09",
         "pregunta": pregunta,
-        "autor": AUTOR,
+        "autor": obtener_autor(),
         "git_commit": obtener_commit_git(),
         "tipo_modelo": "baseline",
         "team": "09",
@@ -136,7 +151,7 @@ def ejecutar_p2(
             {
                 "modelo": "regla_persistencia_saldo_lag1",
                 "granularidad": "estacion-hora",
-                "horizonte_horas": 2,
+                "horizonte_horas": HORIZONTE_P2_HORAS,
                 "umbral_capacidad": umbral,
                 "n_train": len(train),
                 "n_test": len(test),
@@ -176,10 +191,10 @@ def ejecutar_p3(
             {
                 "modelo": "KMeans",
                 "n_clusters": n_clusters,
-                "n_init": 20,
+                "n_init": N_INIT_KMEANS,
                 "n_estaciones": len(perfiles),
                 "n_variables": len(variables),
-                "periodo_clustering": "2026-04-01/2026-08-31",
+                "periodo_clustering": PERIODO_TRAIN,
             }
         )
         mlflow.log_metrics(metricas)
@@ -197,7 +212,7 @@ def ejecutar_p3(
 
         mlflow.sklearn.log_model(
             sk_model=modelo,
-            artifact_path="modelo_p3",
+            name="modelo_p3",
             serialization_format="cloudpickle",
             input_example=perfiles[variables].head(5),
         )
@@ -212,8 +227,8 @@ def main(
         TRACKING_URI_DEFAULT, help="URI HTTP del servidor local de MLflow."
     ),
     experiment_name: str = typer.Option(EXPERIMENTO, help="Nombre del experimento."),
-    umbral_riesgo: float = typer.Option(0.30, min=0.01, max=1.0),
-    n_clusters: int = typer.Option(4, min=2),
+    umbral_riesgo: float = typer.Option(UMBRAL_RIESGO_P2, min=0.01, max=1.0),
+    n_clusters: int = typer.Option(N_CLUSTERS_P3, min=2),
 ) -> None:
     """Ejecuta uno o todos los baselines dentro del mismo experimento de MLflow."""
     pregunta = pregunta.upper()

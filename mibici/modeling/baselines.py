@@ -21,6 +21,8 @@ from sklearn.metrics import (
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
+from mibici.config import N_CLUSTERS_P3, N_INIT_KMEANS, SEMILLA, UMBRAL_RIESGO_P2
+
 
 def baseline_p1_rezago_semanal(df_test: pd.DataFrame) -> np.ndarray:
     """Predice la demanda con el valor observado en la misma hora de la semana previa."""
@@ -44,7 +46,7 @@ def metricas_p1(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
 
 
 def baseline_p2_persistencia(
-    df_test: pd.DataFrame, umbral_capacidad: float = 0.30
+    df_test: pd.DataFrame, umbral_capacidad: float = UMBRAL_RIESGO_P2
 ) -> tuple[np.ndarray, np.ndarray]:
     """Clasifica riesgo suponiendo que el desequilibrio de la hora previa persistirá.
 
@@ -89,8 +91,8 @@ def columnas_p3(df_perfiles: pd.DataFrame) -> list[str]:
 
 def entrenar_baseline_p3(
     df_perfiles: pd.DataFrame,
-    n_clusters: int = 4,
-    semilla: int = 42,
+    n_clusters: int = N_CLUSTERS_P3,
+    semilla: int = SEMILLA,
 ) -> tuple[Pipeline, np.ndarray, list[str], dict[str, float]]:
     """Estandariza los perfiles y entrena el baseline K-Means."""
     if not 2 <= n_clusters < len(df_perfiles):
@@ -103,7 +105,7 @@ def entrenar_baseline_p3(
             ("escalador", StandardScaler()),
             (
                 "kmeans",
-                KMeans(n_clusters=n_clusters, random_state=semilla, n_init=20),
+                KMeans(n_clusters=n_clusters, random_state=semilla, n_init=N_INIT_KMEANS),
             ),
         ]
     )
