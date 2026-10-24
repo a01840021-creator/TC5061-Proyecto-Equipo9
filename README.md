@@ -152,7 +152,7 @@ corrida, el commit y la versión de datos.
 ```bash
 mlflow run . --experiment-name mibici-equipo09 -e register \
   -P p1_run_id=43ba9b881abd4b0bb4cc7188f98eb3ad \
-  -P p2_run_id=91d87b354adf4612b258ea19342d2577 \
+  -P p2_run_id=02fb26c11c364cdda19379709dfce0d0 \
   -P p3_run_id=96b2a3ba470048a6aea3ea756f1a6f14 \
   --env-manager local
 ```
