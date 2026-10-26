@@ -11,7 +11,7 @@ Proyecto MiBici, equipo 9. Este documento formula las tres preguntas del proyect
 | **Qué se predice** | Número de viajes que inician en cada estación en cada hora |
 | **Tipo de tarea** | Regresión |
 | **Granularidad** | Estación por hora |
-| **Horizonte** | Las 24 horas del día siguiente, con la información disponible al cierre del día anterior |
+| **Horizonte** | Las 24 horas del día siguiente, con la información disponible al emitir la predicción, al cierre del día anterior más `RETRASO_DISPONIBILIDAD_SEG` (60 segundos) |
 | **Por qué es relevante** | La demanda no se reparte igual entre estaciones ni entre horas: en los días en que tiene actividad, una estación inicia en promedio 29 viajes, pero en el 61.9 % de las combinaciones estación y hora del tablón de P1 no sale ningún viaje (ambas cifras sin viajes espurios). Saber dónde y cuándo se concentrará la demanda es la base para distribuir la flota |
 | **Quién lo usa** | El operador del sistema |
 | **Qué decisión toma** | Cuántas bicicletas dejar en cada estación al inicio del día y en qué franjas reforzar la operación |
@@ -23,7 +23,7 @@ Proyecto MiBici, equipo 9. Este documento formula las tres preguntas del proyect
 | **Qué se predice** | Si una estación entrará en riesgo de vaciarse o de llenarse en las próximas dos horas |
 | **Tipo de tarea** | Clasificación binaria |
 | **Granularidad** | Estación por hora |
-| **Horizonte** | Las dos horas siguientes, con la información disponible hasta la hora actual |
+| **Horizonte** | Las dos horas siguientes, con la información disponible al emitir la predicción, al cierre de la hora actual más `RETRASO_DISPONIBILIDAD_SEG` (60 segundos) |
 | **Por qué es relevante** | Una estación vacía pierde viajes y una llena impide terminar el viaje ahí. Las dos dañan el servicio y las dos se corrigen con el mismo recurso: el camión de rebalanceo |
 | **Quién lo usa** | El equipo de rebalanceo |
 | **Qué decisión toma** | A qué estaciones mandar el camión en las próximas dos horas y si debe llevar o retirar bicicletas |

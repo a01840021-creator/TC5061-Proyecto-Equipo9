@@ -16,9 +16,18 @@ from sklearn.metrics import (
 
 
 def grafica_p1(
-    fechas: pd.Series, y_true: np.ndarray, y_pred: np.ndarray, destino: Path
+    fechas: pd.Series,
+    y_true: np.ndarray,
+    y_pred: np.ndarray,
+    destino: Path,
+    etiqueta: str,
+    titulo: str,
 ) -> pd.DataFrame:
-    """Compara demanda real y baseline, agregadas para todo el sistema por hora."""
+    """Compara demanda real y predicha, agregadas para todo el sistema por hora.
+
+    `etiqueta` nombra la serie predicha en la leyenda y `titulo` encabeza la gráfica, para
+    que cada corrida diga qué modelo produjo la predicción.
+    """
     resumen = (
         pd.DataFrame({"fecha_hora": fechas.to_numpy(), "real": y_true, "prediccion": y_pred})
         .groupby("fecha_hora", as_index=False)
@@ -29,12 +38,12 @@ def grafica_p1(
     ax.plot(
         resumen["fecha_hora"],
         resumen["prediccion"],
-        label="Rezago semanal",
+        label=etiqueta,
         linewidth=1.1,
         alpha=0.85,
     )
     ax.set(
-        title="P1 · Demanda horaria real frente al baseline",
+        title=titulo,
         xlabel="Fecha",
         ylabel="Viajes iniciados",
     )

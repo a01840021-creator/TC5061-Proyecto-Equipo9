@@ -1,16 +1,18 @@
 # Modelos y métricas
 
-Proyecto MiBici, equipo 9. Para cada pregunta, este documento define el baseline, al menos un modelo candidato y las métricas de evaluación, y justifica cada métrica por la decisión que toma quien usa el resultado. Los baselines están implementados en `mibici/modeling/baselines.py` y registrados en el experimento `mibici-equipo09` de MLflow, con la versión de datos `0c4b34e5425a`. Los candidatos están propuestos y justificados, pero todavía no se implementan.
+Proyecto MiBici, equipo 9. Para cada pregunta, este documento define el baseline, los modelos candidatos y las métricas de evaluación, y justifica cada métrica por la decisión que toma quien usa el resultado. Los baselines están en `mibici/modeling/baselines.py` y `mibici/modeling/train.py`; los candidatos, en `mibici/modeling/candidates.py`; la selección y el registro, en `mibici/modeling/registry.py`. Todos se registran en el experimento `mibici-equipo09` de MLflow con la versión de datos `0c4b34e5425a`.
 
 ## Resumen
 
-| Pregunta | Baseline (implementado) | Candidato (propuesto) | Métricas |
-| --- | --- | --- | --- |
-| P1, regresión | Rezago semanal: la demanda de la misma estación y hora una semana antes | Regresión Ridge con rezagos y variables de calendario | `test_mae`, `test_rmse`, `test_wape`, `test_r2`, `test_bias` |
-| P2, clasificación | Persistencia: el saldo de la hora previa respecto de la capacidad | Regresión logística con pesos balanceados | `test_recall`, `test_precision`, `test_f1`, `test_balanced_accuracy`, `test_average_precision` |
-| P3, agrupamiento | K-Means con k = 4 sobre perfiles estandarizados | Agrupamiento jerárquico aglomerativo de Ward, comparado con K-Means con k elegido por silhouette | `train_silhouette`, `train_davies_bouldin`, `train_calinski_harabasz`, `train_inercia` |
+| Pregunta | Baseline | Candidatos | Métricas | Selección |
+| --- | --- | --- | --- | --- |
+| P1, regresión | Rezago semanal: la demanda de la misma estación y hora una semana antes | Tres HistGradientBoosting y Ridge estandarizado | `mae`, `rmse`, `wape`, `r2`, `bias` | Menor `val_mae` |
+| P2, clasificación | Persistencia: el saldo de la hora previa respecto de la capacidad | Tres HistGradientBoosting con pesos balanceados y regresión logística balanceada | `recall`, `precision`, `f1`, `balanced_accuracy`, `average_precision` | Mayor `val_average_precision` |
+| P3, agrupamiento | K-Means con k = 4 sobre perfiles estandarizados | K-Means con k = 5 y k = 6, MiniBatch K-Means con k = 5, Ward con k = 5 y K-Means con k = 5 sin estaciones inactivas | `train_silhouette`, `train_davies_bouldin`, `train_calinski_harabasz`, `train_inercia` | Mayor `train_silhouette` entre las corridas con las 484 estaciones |
 
-El prefijo de cada métrica indica el conjunto en que se calcula: `test_` para septiembre y `train_` para abril a agosto.
+El prefijo de cada métrica indica el conjunto en que se calcula. En P1 y P2, los candidatos se entrenan de abril a julio; `val_` corresponde a agosto y `test_` a septiembre. Los baselines de P1 y P2 son reglas sin entrenamiento y se evalúan en las mismas dos ventanas, de modo que la comparación usa exactamente las mismas filas. En P3, `train_` corresponde a los perfiles calculados antes del 1 de septiembre. El modelo de cada pregunta se elige con la métrica de validación, nunca con la de prueba, para que septiembre siga siendo una medida independiente del modelo elegido.
+
+Cada predicción se emite al cierre de su ventana más `RETRASO_DISPONIBILIDAD_SEG` (60 segundos, en `mibici/config.py`): al cierre del día anterior en P1, al cierre de cada hora en P2 y al corte del 1 de septiembre en P3. Es la misma constante que define un viaje espurio, así que a la emisión ya se sabe cuáles de las últimas salidas fueron préstamos fallidos y las variables no usan información posterior. El detalle está en `references/definicion_datos.md`.
 
 ## P1. Viajes que inician por estación y hora
 
@@ -18,7 +20,10 @@ El prefijo de cada métrica indica el conjunto en que se calcula: `test_` para s
 
 **Baseline.** Predice la demanda de cada estación y hora con la observada en la misma estación y hora siete días antes (`rezago_168h`). No aprende nada, pero captura el ciclo semanal, que es la regularidad más fuerte de los datos: en el periodo de prueba su correlación con la demanda es 0.71, contra 0.63 del rezago de 24 horas.
 
-**Candidato.** Regresión Ridge sobre los tres rezagos (24, 48 y 168 horas), la hora del día, el día de la semana, el indicador de fin de semana y la capacidad de la estación, con la hora y el día codificados como categorías. Es el paso natural sobre el baseline: combina los rezagos en lugar de elegir uno y ajusta el nivel por hora y día. La penalización L2 estabiliza los coeficientes cuando los rezagos están correlacionados entre sí, como aquí. Con 1.7 millones de filas de entrenamiento se ajusta en segundos y sus coeficientes se pueden leer. Como una regresión lineal puede producir valores negativos, las predicciones se recortan en cero.
+**Candidatos.** Todos usan las mismas variables: los tres rezagos (24, 48 y 168 horas), la hora del día, el día de la semana, el indicador de fin de semana, la capacidad y el identificador de la estación. No se usa el mes: entrenamiento, validación y prueba cubren meses distintos, así que el modelo aprendería un efecto de valores que nunca vuelve a ver.
+
+- Tres `HistGradientBoostingRegressor` que varían la tasa de aprendizaje (0.05 y 0.10), las iteraciones (100 a 200), las hojas por árbol (31 y 63) y la regularización L2 (0 a 1). Captan interacciones no lineales entre hora, día y rezagos sin codificarlas a mano.
+- `Ridge` con las variables estandarizadas (`StandardScaler` y `Ridge` en un `Pipeline`) y `alpha` como parámetro. Es la alternativa lineal: combina los rezagos en lugar de elegir uno, la penalización L2 estabiliza los coeficientes cuando los rezagos están correlacionados entre sí, se ajusta en segundos y sus coeficientes se pueden leer. Las variables entran como numéricas, sin codificar la hora ni el día como categorías, y las predicciones no se recortan en cero.
 
 **Métricas.**
 
@@ -30,6 +35,8 @@ El prefijo de cada métrica indica el conjunto en que se calcula: `test_` para s
 | `test_r2` | Proporción de la varianza de la demanda que explica el modelo | Sirve de contexto para saber cuánto de la variación entre estaciones y horas se captura, aunque no se traduce directamente en bicicletas. |
 | `test_bias` | Promedio de predicción menos real, en viajes | El signo importa: un sesgo negativo subestima la demanda y deja estaciones sin bicicletas, que es el error más costoso para el servicio; uno positivo deja bicicletas ociosas, que cuesta traslados. |
 
+Cada métrica se registra para agosto (`val_mae`) y para septiembre (`test_mae`). El candidato que pasa al Model Registry es el de menor `val_mae`.
+
 **Resultado del baseline (septiembre).** MAE 0.949, RMSE 1.970, WAPE 0.701, R² 0.445 y sesgo de menos 0.112 viajes. El sesgo negativo es coherente con el aumento de viajes de septiembre: la semana previa subestima el mes siguiente.
 
 ## P2. Riesgo de vaciado o llenado en las próximas dos horas
@@ -38,7 +45,12 @@ El prefijo de cada métrica indica el conjunto en que se calcula: `test_` para s
 
 **Baseline.** Regla de persistencia: calcula el valor absoluto del saldo de la hora previa entre la capacidad y marca riesgo si alcanza el 30 %. Supone que el desbalance reciente continúa.
 
-**Candidato.** Regresión logística con `class_weight="balanced"` sobre las variables del tablón de P2: salidas, llegadas y saldo de la hora previa, saldo medio de las últimas tres horas, hora, día de la semana, fin de semana y capacidad, estandarizadas con un escalador ajustado sólo en entrenamiento. Los pesos balanceados compensan que la clase de riesgo sea apenas el 3.7 % del entrenamiento. A diferencia de la regla, entrega una probabilidad, de modo que el umbral de alerta se puede ajustar al número de camiones disponibles, y sus coeficientes muestran qué variables empujan el riesgo.
+**Candidatos.** Todos usan las variables del tablón de P2: salidas, llegadas y saldo de la hora previa, saldo medio de las últimas tres horas, hora, día de la semana, fin de semana, capacidad e identificador de la estación. Todos compensan que la clase de riesgo sea una fracción pequeña del entrenamiento y entregan una probabilidad; la alerta se emite cuando la probabilidad alcanza `UMBRAL_DECISION_P2` (0.5), y ese umbral se puede ajustar después al número de camiones disponibles.
+
+- Tres `HistGradientBoostingClassifier` con los mismos hiperparámetros que en P1 y pesos de muestra balanceados (`compute_sample_weight`).
+- Regresión logística con `class_weight="balanced"`, variables estandarizadas con un escalador ajustado sólo en entrenamiento y `C` como parámetro. Es la alternativa lineal: sus coeficientes muestran qué variables empujan el riesgo.
+
+El candidato que pasa al Model Registry es el de mayor `val_average_precision`, porque evalúa la probabilidad en todos los umbrales y no depende del 0.5 elegido. La recuperación sigue siendo la métrica que traduce el error más caro a la operación, una vez fijado el umbral.
 
 **Métricas.** El costo de los errores no es simétrico. Un falso negativo es una estación que se vacía o se llena sin que nadie la atienda: se pierden viajes o el usuario no tiene dónde dejar la bicicleta. Un falso positivo es un traslado innecesario del camión, que consume tiempo de una flota limitada.
 
@@ -57,9 +69,16 @@ El prefijo de cada métrica indica el conjunto en que se calcula: `test_` para s
 
 **Decisión que apoya.** Planeación urbana decide dónde ampliar capacidad o abrir estaciones y qué tipo de estación conviene en cada zona, a partir de grupos que se puedan ubicar en el mapa e interpretar por su curva horaria.
 
-**Baseline.** K-Means con k = 4, 20 inicializaciones y semilla 42, sobre los 26 rasgos de perfil estandarizados (24 proporciones horarias, proporción de fin de semana y proporción de salidas sobre la actividad total), calculados con los viajes que inician antes del 1 de septiembre.
+**Baseline.** K-Means con k = 4, 20 inicializaciones y semilla 42, sobre los 26 rasgos de perfil estandarizados (24 proporciones horarias, proporción de fin de semana y proporción de salidas sobre la actividad total), calculados con las salidas que inician y las llegadas que terminan antes del 1 de septiembre.
 
-**Candidato.** Agrupamiento jerárquico aglomerativo con enlace de Ward, comparado con K-Means con k elegido por silhouette (por ejemplo, entre 2 y 10 grupos). Ward minimiza la misma varianza dentro de los grupos que K-Means, así que la comparación es justa, pero produce una jerarquía completa: el dendrograma muestra qué grupos se separan primero y permite a planeación elegir el nivel de detalle (zonas grandes o subzonas) sin volver a entrenar. Además es determinista y no depende de la semilla. `AgglomerativeClustering` de scikit-learn no tiene método `predict`: ajusta y asigna los grupos en un solo paso con `fit_predict` sobre las estaciones de entrenamiento. Para asignar una estación nueva sin volver a entrenar, se calcularía el centroide de cada grupo en el espacio estandarizado y se le asignaría el grupo del centroide más cercano. Elegir k por silhouette, en lugar de fijarlo en 4, hace que el número de grupos responda a los datos.
+**Candidatos.** Todos usan los mismos 26 rasgos estandarizados que el baseline.
+
+- K-Means con k = 5 y k = 6, para ver si más grupos separan mejor los patrones que el k = 4 del baseline.
+- MiniBatch K-Means con k = 5, que ajusta con lotes y cuesta menos al crecer el número de estaciones.
+- Ward con k = 5. Ward minimiza la misma varianza dentro de los grupos que K-Means, así que la comparación es justa, pero es determinista y no depende de la semilla. `AgglomerativeClustering` de scikit-learn no tiene `predict`; por eso el proyecto lo envuelve en `WardCentroides` (`mibici/modeling/clustering.py`), un estimador compatible con scikit-learn que ajusta Ward, calcula el centroide de cada grupo en el espacio estandarizado y asigna cualquier estación nueva al centroide más cercano. Así el modelo tiene firma y se carga desde el Model Registry como los demás.
+- K-Means con k = 5 sin las estaciones inactivas, es decir, sin salidas antes del corte (criterio `MIN_SALIDAS_ESTACION_ACTIVA` en `mibici/config.py`; ver el hallazgo de abajo). Es una variación de los datos de entrada, no del algoritmo: la corrida registra el parámetro `estaciones=activas`, el número de estaciones excluidas, sus identificadores y el archivo `data/estaciones_excluidas_p3.csv`.
+
+El candidato que pasa al Model Registry es el de mayor `train_silhouette` entre las corridas con las 484 estaciones. La corrida sin inactivas no compite: su silhouette se calcula sobre otro conjunto de estaciones y quitar 16 vectores idénticos cambia la métrica por sí solo, así que compararla con las demás no diría qué algoritmo agrupa mejor. Se reporta aparte como evidencia del efecto de esas estaciones.
 
 **Métricas.** Ninguna métrica interna garantiza que un grupo sea útil para planear; por eso se combinan con los artefactos del run (mapa y curvas horarias promedio) para interpretar cada grupo.
 
@@ -95,4 +114,4 @@ Los grupos del run tienen 212, 92, 164 y 16 estaciones (grupos 0 a 3). Las 16 es
 | 310 | ex-(ZPN-063) C. San Felipe Neri / Av. Guadalu | 15 | Sin viajes en el periodo |
 | 492 | (GDL-297) Calz. Independencia / Av. República | 19 | Sin viajes en el periodo |
 
-Los nombres se copian tal como aparecen en `nomenclatura_2026_09.csv`, incluidos los truncados. Catorce de las 16 llevan el prefijo "ex-" en su nombre, lo que sugiere estaciones dadas de baja; la nomenclatura no lo explica. La estación 180 empieza a registrar salidas en septiembre y la 492 no registra viajes en ningún mes del periodo. Al leer el mapa y las curvas del run, el grupo 3 debe interpretarse como estaciones sin actividad en entrenamiento y no como un patrón de uso.
+Los nombres se copian tal como aparecen en `nomenclatura_2026_09.csv`, incluidos los truncados. Catorce de las 16 llevan el prefijo "ex-" en su nombre, lo que sugiere estaciones dadas de baja; la nomenclatura no lo explica. La estación 180 empieza a registrar salidas en septiembre y la 492 no registra viajes en ningún mes del periodo. Al leer el mapa y las curvas del run, el grupo 3 debe interpretarse como estaciones sin actividad en entrenamiento y no como un patrón de uso. Son exactamente las 16 que excluye la corrida `P3_kmeans_k5_activas`.
