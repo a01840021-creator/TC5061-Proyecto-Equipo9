@@ -2,14 +2,16 @@
 
 Proyecto integrador del equipo 9. Propone y construye una solución de Machine Learning sobre los datos abiertos de MiBici, el sistema de bicicleta pública del Área Metropolitana de Guadalajara, para responder tres preguntas de operación.
 
-## Integrantes
+### Contribuciones en la entrega 2: MLflow Project y tracking avanzado
 
-| Matrícula | Nombre | Contribución |
-| --- | --- | --- |
-| A01840021 | Carrera Rojas, Mariana Judith | Configuración inicial: estructura con Cookiecutter Data Science, repositorio en GitHub y protección de la rama principal |
-| A01797854 | Barrera Mendoza, José Manuel | Formulación del problema y ML Canvas, definición de los datos, dependencias con versión fija, ingesta reproducible y versionado de datos, flujo de trabajo con Git |
-| A01797868 | Barranco Cruz, Luis Fernando | Implementación de los baselines P1, P2 y P3; instrumentación con MLflow Tracking; métricas, artefactos y pruebas automatizadas |
-| A01840136 | Carrera Castillo, David | Análisis exploratorio, módulo reutilizable de feature engineering sin fuga temporal y diagrama de arquitectura |
+| Integrante | Matrícula | Contribución | Evidencia |
+| --- | --- | --- | --- |
+| Carrera Rojas, Mariana Judith | A01840021 | Configuración inicial del MLflow Project, con los primeros puntos de entrada en ⁠ MLproject ⁠ y la declaración del entorno en ⁠ python_env.yaml ⁠; revisión del reporte final y actualización de la documentación. | PR #12 —propuesta inicial posteriormente sustituida y cerrada sin fusionar— y revisión aprobatoria del PR #16. |
+| Barrera Mendoza, José Manuel | A01797854 | Modelos candidatos por algoritmo, corrección de fugas temporales en P2 y P3, selección automática mediante los aliases ⁠ champion ⁠ y ⁠ challenger ⁠, linaje en Model Registry, corridas finales y reporte. | PR #15 y #16; revisión aprobatoria del PR #14. |
+| Barranco Cruz, Luis Fernando | A01797868 | MLflow Project con puntos de entrada parametrizados, búsquedas con nested runs, registro estructurado de artefactos y primera automatización del Model Registry. | PR #13; revisión aprobatoria del PR #15. |
+| Carrera Castillo, David | A01840136 | Primera versión del reporte de experimentos e integración de capturas y evidencias de MLflow. | PR #14; revisión aprobatoria del PR #13. |
+
+	⁠*Nota:* El PR #12 se cerró sin fusionarse porque su configuración inicial fue sustituida y ampliada mediante los PR #13 y #15.
 
 ## Preguntas del proyecto
 
@@ -233,3 +235,4 @@ Seguimos [GitHub Flow](https://docs.github.com/en/get-started/using-github/githu
 | `test` | Pruebas |
 
 - **Lo que nunca entra al repositorio:** datos de MiBici, carpetas de MLflow (`mlruns/`, `mlartifacts/`), modelos serializados ni credenciales (`.env`).
+
