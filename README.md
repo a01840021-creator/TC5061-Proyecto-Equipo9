@@ -82,12 +82,12 @@ export MLFLOW_TRACKING_URI=http://127.0.0.1:5000
 El archivo `MLproject` declara el entorno (`python_env.yaml`) y cinco puntos de entrada: `ingest`, `baseline`, `train`, `search` y `register`. Rutas, fechas, semilla, umbrales y nombre del experimento se leen de `mibici/config.py`. La secuencia completa es:
 
 ```bash
-mlflow run . --experiment-name mibici-equipo09 --env-manager uv -e ingest
+mlflow run . --experiment-name mibici-equipo09 --env-manager uv -e ingest --run-name ingest_datos
 mlflow run . --experiment-name mibici-equipo09 --env-manager uv -e baseline
 mlflow run . --experiment-name mibici-equipo09 --env-manager uv -e search -P pregunta=p1
 mlflow run . --experiment-name mibici-equipo09 --env-manager uv -e search -P pregunta=p2
 mlflow run . --experiment-name mibici-equipo09 --env-manager uv -e search -P pregunta=p3
-mlflow run . --experiment-name mibici-equipo09 --env-manager uv -e register
+mlflow run . --experiment-name mibici-equipo09 --env-manager uv -e register --run-name register_champion_challenger
 ```
 
 `ingest` descarga los datos y escribe el manifiesto; `baseline` registra los tres baselines; cada `search` registra una corrida padre con una corrida hija por candidato; `register` elige y registra el mejor modelo de cada pregunta sin recibir ningún identificador de corrida.
