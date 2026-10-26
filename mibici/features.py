@@ -41,6 +41,13 @@ def filtrar_viajes_invalidos(df_viajes: pd.DataFrame) -> pd.DataFrame:
     inmediatas. No son demanda real (P1), no mueven bicicletas entre estaciones (P2) y
     pueden distorsionar el perfil horario de las estaciones donde abundan (P3), por eso se
     quitan antes de construir cualquiera de los tres conjuntos.
+
+    El filtro mira el fin del viaje, que puede caer después del cierre de la ventana de una
+    predicción. No usa información posterior a la emisión: cada predicción se emite al
+    cierre de su ventana más `RETRASO_DISPONIBILIDAD_SEG`, que es el mismo valor que
+    `DURACION_MINIMA_VIAJE_S`. Un viaje espurio que empezó antes del cierre ya terminó a la
+    emisión, y uno que sigue abierto a la emisión dura al menos ese retraso y no es espurio,
+    así que la decisión del filtro ya es observable al emitir.
     """
     duracion = (df_viajes["fin_del_viaje"] - df_viajes["inicio_del_viaje"]).dt.total_seconds()
     espurio = (df_viajes["origen_id"] == df_viajes["destino_id"]) & (
@@ -84,14 +91,17 @@ def generar_dataset_p1(
 ) -> pd.DataFrame:
     """Construye el tablón de P1: viajes que inician por estación y hora.
 
-    La predicción se emite al cierre del día d menos 1 para las 24 horas del día d, así
-    que toda variable usa sólo información hasta ese cierre:
+    La predicción para las 24 horas del día d se emite al cierre del día d menos 1 más
+    `RETRASO_DISPONIBILIDAD_SEG`, cuando ya se sabe cuáles de las salidas de ese día son
+    viajes espurios (ver `filtrar_viajes_invalidos`). Toda variable usa sólo información
+    observable a la emisión:
 
     - `rezago_24h`, `rezago_48h` y `rezago_168h`: salidas de la misma hora uno, dos y
       siete días antes. La demanda de una estación se parece a la de ayer y, más todavía,
       a la del mismo día de la semana anterior; el rezago semanal es además el baseline.
     - `hora`, `dia_semana` y `es_fin_de_semana`: la demanda sigue ciclos diarios y
-      semanales que se conocen de antemano.
+      semanales que se conocen de antemano. No se incluye el mes: entrenamiento, validación
+      y prueba cubren meses distintos, así que el modelo vería valores que nunca se repiten.
     - `dpcapacity`: atributo fijo del tamaño de la estación, como contexto para los modelos
       candidatos; su correlación con la demanda media de entrenamiento es débil (0.29).
 
@@ -121,9 +131,8 @@ def generar_dataset_p1(
     df_p1["hora"] = df_p1["fecha_hora"].dt.hour
     df_p1["dia_semana"] = df_p1["fecha_hora"].dt.dayofweek
     df_p1["es_fin_de_semana"] = df_p1["dia_semana"].isin([5, 6]).astype(int)
-    df_p1["mes"] = df_p1["fecha_hora"].dt.month
 
-    # Rezagos de al menos 24 horas: disponibles al cierre del día anterior
+    # Rezagos de al menos 24 horas: disponibles al emitir, tras el cierre del día anterior
     df_p1["rezago_24h"] = df_p1.groupby("estacion_id")["demanda"].shift(24)
     df_p1["rezago_48h"] = df_p1.groupby("estacion_id")["demanda"].shift(48)
     df_p1["rezago_168h"] = df_p1.groupby("estacion_id")["demanda"].shift(168)
@@ -146,7 +155,9 @@ def generar_dataset_p2(
     absoluto de llegadas menos salidas alcanza `umbral_capacidad` veces los anclajes de
     la estación. Un saldo negativo grande anticipa que se vacía; uno positivo, que se llena.
 
-    La fila de la hora t cubre el intervalo [t, t+1) y la predicción se emite al cerrarlo.
+    La fila de la hora t cubre el intervalo [t, t+1) y la predicción se emite en t+1 más
+    `RETRASO_DISPONIBILIDAD_SEG`, cuando ya se sabe cuáles de sus salidas son viajes
+    espurios (ver `filtrar_viajes_invalidos`).
     Las variables usan sólo horas hasta t: salidas, llegadas y saldo de la hora previa, y
     el saldo medio de las últimas tres horas, porque el desbalance reciente es la
     información más cercana sobre el desbalance próximo; además hora, día de la semana y fin de semana, porque el desbalance sigue
@@ -229,11 +240,25 @@ def generar_dataset_p2(
     )
 
     # Purgar las últimas horas de entrenamiento cuya etiqueta usaría el periodo de prueba
-    corte = pd.Timestamp(FECHA_CORTE)
-    purga = (df_p2["fecha_hora"] >= corte - pd.Timedelta(hours=horizonte_horas)) & (
-        df_p2["fecha_hora"] < corte
+    return purgar_ventana_futura(df_p2, FECHA_CORTE, horizonte_horas)
+
+
+def purgar_ventana_futura(
+    df: pd.DataFrame,
+    fecha_corte: str,
+    horizonte_horas: int,
+    columna_fecha: str = "fecha_hora",
+) -> pd.DataFrame:
+    """Quita las horas previas al corte cuya ventana futura de `horizonte_horas` lo cruza.
+
+    La etiqueta de la hora t usa las horas t+1 a t+horizonte, así que las últimas
+    `horizonte_horas` antes del corte se etiquetan con horas del periodo siguiente.
+    """
+    corte = pd.Timestamp(fecha_corte)
+    purga = (df[columna_fecha] >= corte - pd.Timedelta(hours=horizonte_horas)) & (
+        df[columna_fecha] < corte
     )
-    return df_p2[~purga].reset_index(drop=True)
+    return df[~purga].reset_index(drop=True)
 
 
 def generar_dataset_p3(
@@ -254,42 +279,55 @@ def generar_dataset_p3(
       estación funciona más como origen o como destino.
 
     Las estaciones sin salidas quedan con perfil horario cero y `ratio_salidas` de 0.5.
-    Por defecto sólo se usan los viajes iniciados antes de la fecha de corte. Sus llegadas
-    se cuentan aunque ocurran después del corte: con los datos actuales son 18 viajes que
-    terminan el 1 de septiembre, que cambian `ratio_salidas` en 18 estaciones en menos de
-    0.0002 y no cambian el grupo de ninguna estación.
+    La columna `n_salidas` no es una variable del agrupamiento: sirve para identificar
+    esas estaciones. Con `solo_train=True`, las salidas se cuentan por inicio anterior al
+    corte y las llegadas por fin anterior al corte, de forma independiente, para que
+    ningún perfil use un evento ocurrido desde el corte. Los perfiles se emiten en el corte
+    más `RETRASO_DISPONIBILIDAD_SEG`, cuando ya se sabe cuáles de las últimas salidas antes
+    del corte son viajes espurios (ver `filtrar_viajes_invalidos`).
     """
     logger.info("Construyendo perfiles para P3...")
     viajes_limpios = filtrar_viajes_invalidos(viajes)
 
+    salidas = viajes_limpios
+    llegadas = viajes_limpios
     if solo_train:
-        viajes_limpios = viajes_limpios[viajes_limpios["inicio_del_viaje"] < FECHA_CORTE].copy()
+        corte = pd.Timestamp(FECHA_CORTE)
+        salidas = viajes_limpios[viajes_limpios["inicio_del_viaje"] < corte]
+        llegadas = viajes_limpios[viajes_limpios["fin_del_viaje"] < corte]
 
-    viajes_limpios["hora"] = viajes_limpios["inicio_del_viaje"].dt.hour
-    viajes_limpios["es_fds"] = (
-        viajes_limpios["inicio_del_viaje"].dt.dayofweek.isin([5, 6]).astype(int)
+    salidas = salidas.assign(
+        hora=salidas["inicio_del_viaje"].dt.hour,
+        es_fds=salidas["inicio_del_viaje"].dt.dayofweek.isin([5, 6]).astype(int),
     )
 
     # 1. Distribución de salidas en las 24 horas
-    salidas_h = viajes_limpios.groupby(["origen_id", "hora"]).size().unstack(fill_value=0)
+    salidas_h = (
+        salidas.groupby(["origen_id", "hora"])
+        .size()
+        .unstack(fill_value=0)
+        .reindex(columns=range(24), fill_value=0)
+    )
     total_salidas = salidas_h.sum(axis=1).replace(0, np.nan)
     prop_h = salidas_h.div(total_salidas, axis=0).fillna(0)
     prop_h.columns = [f"prop_hora_{h:02d}" for h in range(24)]
 
     # 2. Uso en fin de semana
-    prop_fds = viajes_limpios.groupby("origen_id")["es_fds"].mean().rename("prop_fin_de_semana")
+    prop_fds = salidas.groupby("origen_id")["es_fds"].mean().rename("prop_fin_de_semana")
 
     # 3. Proporción de salidas sobre el total de actividad
-    salidas_est = viajes_limpios.groupby("origen_id").size().rename("salidas")
-    llegadas_est = viajes_limpios.groupby("destino_id").size().rename("llegadas")
+    salidas_est = salidas.groupby("origen_id").size().rename("n_salidas")
+    llegadas_est = llegadas.groupby("destino_id").size().rename("n_llegadas")
     flujos = pd.concat([salidas_est, llegadas_est], axis=1).fillna(0)
-    suma = (flujos["salidas"] + flujos["llegadas"]).replace(0, np.nan)
-    flujos["ratio_salidas"] = (flujos["salidas"] / suma).fillna(0.5)
+    suma = (flujos["n_salidas"] + flujos["n_llegadas"]).replace(0, np.nan)
+    flujos["ratio_salidas"] = (flujos["n_salidas"] / suma).fillna(0.5)
 
     df_p3 = estaciones.copy().set_index("id")
     df_p3 = df_p3.join(prop_h, how="left").fillna(0)
     df_p3 = df_p3.join(prop_fds, how="left").fillna(0)
     df_p3 = df_p3.join(flujos[["ratio_salidas"]], how="left").fillna(0.5)
+    df_p3 = df_p3.join(salidas_est, how="left").fillna({"n_salidas": 0})
+    df_p3["n_salidas"] = df_p3["n_salidas"].astype(int)
 
     return df_p3.reset_index()
 

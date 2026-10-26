@@ -15,15 +15,19 @@ import pandas as pd
 import typer
 
 from mibici.config import (
+    EQUIPO,
     EXPERIMENTO,
     FECHA_CORTE,
     FECHA_FIN,
     FECHA_INICIO,
+    FECHA_VALIDACION,
     HORIZONTE_P2_HORAS,
     N_CLUSTERS_P3,
     N_INIT_KMEANS,
+    PERIODO_CLUSTERING,
     PERIODO_TEST,
     PERIODO_TRAIN,
+    PERIODO_VALIDACION,
     PROJ_ROOT,
     SEMILLA,
     TRACKING_URI_DEFAULT,
@@ -49,6 +53,7 @@ from mibici.modeling.baselines import (
     entrenar_baseline_p3,
     metricas_p1,
     metricas_p2,
+    renombrar_metricas,
 )
 
 app = typer.Typer(add_completion=False)
@@ -75,29 +80,35 @@ def obtener_commit_git() -> str:
         return "desconocido"
 
 
-def parametros_comunes(version_datos: str) -> dict[str, str | int]:
+def etiquetas(pregunta: str, familia: str, etapa: str) -> dict[str, str]:
+    """Etiquetas comunes a baselines, búsquedas y candidatos, para filtrar en la interfaz.
+
+    `etapa` es `baseline`, `search` o `candidate`.
+    """
     return {
+        "equipo": EQUIPO,
+        "question": pregunta.upper(),
+        "model_family": familia,
+        "stage_of_work": etapa,
+        "git_commit": obtener_commit_git(),
+        "autor": obtener_autor(),
+    }
+
+
+def parametros_comunes(version_datos: str, con_validacion: bool = True) -> dict[str, str | int]:
+    """Periodos, versión de datos y semilla; P3 no tiene ventana de validación."""
+    parametros = {
         "fecha_inicio": FECHA_INICIO,
         "fecha_fin": FECHA_FIN,
         "periodo_train": PERIODO_TRAIN,
+        "periodo_validation": PERIODO_VALIDACION,
         "periodo_test": PERIODO_TEST,
         "version_datos": version_datos,
         "semilla": SEMILLA,
     }
-
-
-def etiquetas_comunes(pregunta: str) -> dict[str, str]:
-    return {
-        "equipo": "09",
-        "pregunta": pregunta,
-        "autor": obtener_autor(),
-        "git_commit": obtener_commit_git(),
-        "tipo_modelo": "baseline",
-        "team": "09",
-        "question": pregunta,
-        "model_family": "baseline",
-        "stage_of_work": "baseline",
-    }
+    if not con_validacion:
+        del parametros["periodo_validation"]
+    return parametros
 
 
 def guardar_json(contenido: dict[str, float], destino: Path) -> None:
@@ -107,12 +118,18 @@ def guardar_json(contenido: dict[str, float], destino: Path) -> None:
 def ejecutar_p1(viajes: pd.DataFrame, estaciones: pd.DataFrame, version: str) -> None:
     datos = generar_dataset_p1(viajes, estaciones)
     train, test = particionar_temporalmente(datos, fecha_corte=FECHA_CORTE)
+    # La regla no se entrena: se evalúa en la ventana de validación de los candidatos
+    _, validacion = particionar_temporalmente(train, fecha_corte=FECHA_VALIDACION)
+    y_val = validacion["demanda"].to_numpy(dtype="float64")
     y_true = test["demanda"].to_numpy(dtype="float64")
     y_pred = baseline_p1_rezago_semanal(test)
-    metricas = metricas_p1(y_true, y_pred)
+    metricas = {
+        **renombrar_metricas(metricas_p1(y_val, baseline_p1_rezago_semanal(validacion)), "val"),
+        **metricas_p1(y_true, y_pred),
+    }
 
     with mlflow.start_run(run_name="P1_baseline_rezago_semanal"):
-        mlflow.set_tags(etiquetas_comunes("P1"))
+        mlflow.set_tags(etiquetas("P1", "regla_rezago_semanal", "baseline"))
         mlflow.log_params(parametros_comunes(version))
         mlflow.log_params(
             {
@@ -120,13 +137,21 @@ def ejecutar_p1(viajes: pd.DataFrame, estaciones: pd.DataFrame, version: str) ->
                 "granularidad": "estacion-hora",
                 "horizonte": "24_horas",
                 "n_train": len(train),
+                "n_validation": len(validacion),
                 "n_test": len(test),
             }
         )
         mlflow.log_metrics(metricas)
         with tempfile.TemporaryDirectory() as temporal:
             temporal = Path(temporal)
-            resumen = grafica_p1(test["fecha_hora"], y_true, y_pred, temporal / "demanda_p1.png")
+            resumen = grafica_p1(
+                test["fecha_hora"],
+                y_true,
+                y_pred,
+                temporal / "demanda_p1.png",
+                etiqueta="Rezago semanal",
+                titulo="P1 · Demanda horaria real frente al baseline",
+            )
             resumen.to_csv(temporal / "demanda_horaria_p1.csv", index=False)
             guardar_json(metricas, temporal / "metricas_p1.json")
             mlflow.log_artifacts(temporal, artifact_path="evidencias_p1")
@@ -140,12 +165,19 @@ def ejecutar_p2(
 ) -> None:
     datos = generar_dataset_p2(viajes, estaciones, umbral_capacidad=umbral)
     train, test = particionar_temporalmente(datos, fecha_corte=FECHA_CORTE)
+    # La regla no se entrena: se evalúa en la ventana de validación de los candidatos
+    _, validacion = particionar_temporalmente(train, fecha_corte=FECHA_VALIDACION)
+    y_val = validacion["riesgo"].to_numpy(dtype="int8")
+    pred_val, score_val = baseline_p2_persistencia(validacion, umbral_capacidad=umbral)
     y_true = test["riesgo"].to_numpy(dtype="int8")
     y_pred, score = baseline_p2_persistencia(test, umbral_capacidad=umbral)
-    metricas = metricas_p2(y_true, y_pred, score)
+    metricas = {
+        **renombrar_metricas(metricas_p2(y_val, pred_val, score_val), "val"),
+        **metricas_p2(y_true, y_pred, score),
+    }
 
     with mlflow.start_run(run_name="P2_baseline_persistencia_saldo"):
-        mlflow.set_tags(etiquetas_comunes("P2"))
+        mlflow.set_tags(etiquetas("P2", "regla_persistencia_saldo", "baseline"))
         mlflow.log_params(parametros_comunes(version))
         mlflow.log_params(
             {
@@ -154,6 +186,7 @@ def ejecutar_p2(
                 "horizonte_horas": HORIZONTE_P2_HORAS,
                 "umbral_capacidad": umbral,
                 "n_train": len(train),
+                "n_validation": len(validacion),
                 "n_test": len(test),
             }
         )
@@ -178,15 +211,15 @@ def ejecutar_p3(
     n_clusters: int,
 ) -> None:
     perfiles = generar_dataset_p3(viajes, estaciones, solo_train=True)
-    modelo, etiquetas, variables, metricas = entrenar_baseline_p3(
+    modelo, grupos, variables, metricas = entrenar_baseline_p3(
         perfiles, n_clusters=n_clusters, semilla=SEMILLA
     )
     perfiles = perfiles.copy()
-    perfiles["cluster"] = etiquetas
+    perfiles["cluster"] = grupos
 
     with mlflow.start_run(run_name=f"P3_baseline_kmeans_k{n_clusters}"):
-        mlflow.set_tags(etiquetas_comunes("P3"))
-        mlflow.log_params(parametros_comunes(version))
+        mlflow.set_tags(etiquetas("P3", "kmeans", "baseline"))
+        mlflow.log_params(parametros_comunes(version, con_validacion=False))
         mlflow.log_params(
             {
                 "modelo": "KMeans",
@@ -194,7 +227,7 @@ def ejecutar_p3(
                 "n_init": N_INIT_KMEANS,
                 "n_estaciones": len(perfiles),
                 "n_variables": len(variables),
-                "periodo_clustering": PERIODO_TRAIN,
+                "periodo_clustering": PERIODO_CLUSTERING,
             }
         )
         mlflow.log_metrics(metricas)

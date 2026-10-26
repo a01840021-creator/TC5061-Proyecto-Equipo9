@@ -64,7 +64,7 @@ Se descartan en la ingesta `usuario_id`, `genero` y `anio_de_nacimiento` (ver co
 
 En el tablón de P2 (480 estaciones, sin viajes espurios y sin las horas cuya ventana futura está incompleta), el 3.9 % de las observaciones queda en riesgo: 1.8 % por vaciado y 2.1 % por llenado. En entrenamiento la proporción es 3.7 % (1.7 % y 2.0 %) y en prueba 5.0 % (2.4 % y 2.6 %). Las estaciones 99, 109, 116 y 138 tienen capacidad cero en la nomenclatura y se excluyen de P2, porque su etiqueta no se puede calcular; el código las identifica en los datos con `dpcapacity == 0`.
 
-**P3. Perfil de uso por estación.** Sin variable objetivo. Cada estación se describe con la proporción de sus salidas en cada hora del día, la proporción de sus salidas en fin de semana y la proporción de salidas sobre el total de sus salidas y llegadas. Las tres se calculan con los viajes que inician antes del 1 de septiembre. Las estaciones sin salidas en ese periodo quedan con perfil horario cero y proporción de salidas de 0.5; el efecto que esto tiene en el agrupamiento se describe en `references/modelos_metricas.md`.
+**P3. Perfil de uso por estación.** Sin variable objetivo. Cada estación se describe con la proporción de sus salidas en cada hora del día, la proporción de sus salidas en fin de semana y la proporción de salidas sobre el total de sus salidas y llegadas. Las salidas se cuentan con los viajes que inician antes del 1 de septiembre y las llegadas con los que terminan antes de esa fecha, de forma independiente. Las 16 estaciones sin salidas en ese periodo quedan con perfil horario cero y proporción de salidas de 0.5; el efecto que esto tiene en el agrupamiento, y la corrida que las excluye, se describen en `references/modelos_metricas.md`.
 
 ### Tratamiento de viajes espurios
 
@@ -73,6 +73,14 @@ el 3.6 % del total. Se interpretan como préstamos fallidos o devoluciones inmed
 como viajes reales. La ingesta los conserva para mantener fidelidad respecto de la fuente,
 pero `features.py` los excluye antes de construir P1, P2 y P3. De esta manera, la regla queda
 documentada, es reproducible y no altera los archivos crudos.
+
+El filtro decide con el fin del viaje, que puede caer después del cierre de la ventana de
+una predicción. Por eso cada predicción se emite al cierre de su ventana más
+`RETRASO_DISPONIBILIDAD_SEG` (60 segundos, en `mibici/config.py`), y el umbral del filtro,
+`DURACION_MINIMA_VIAJE_S`, es esa misma constante. A la emisión, el desenlace de cualquier
+viaje espurio ya es observable: si empezó antes del cierre, ya volvió a su origen; un viaje
+que sigue abierto a la emisión dura al menos el retraso y no es espurio. Así, la limpieza no
+usa información posterior a la emisión.
 
 ## Condiciones de uso y datos personales
 
@@ -88,19 +96,21 @@ Ante esa falta de licencia, el proyecto adopta un uso conservador:
 
 **Partición temporal, nunca aleatoria.** Una partición aleatoria mezclaría horas de septiembre en el entrenamiento y le daría al modelo información del futuro que no tendría en operación.
 
-| Conjunto | Periodo | Viajes |
-| --- | --- | ---: |
-| Entrenamiento | 1 de abril al 31 de agosto de 2026 | 1,800,876 |
-| Prueba | 1 al 30 de septiembre de 2026 | 489,298 |
+| Conjunto | Periodo | Viajes | Quién lo usa |
+| --- | --- | ---: | --- |
+| Entrenamiento | 1 de abril al 31 de agosto de 2026 | 1,800,876 | Perfiles de P3 y periodo previo al corte de los baselines |
+| Entrenamiento de candidatos | 1 de abril al 31 de julio de 2026 | 1,407,352 | Ajuste de los candidatos de P1 y P2 |
+| Validación | 1 al 31 de agosto de 2026 | 393,524 | Comparación de candidatos y baselines de P1 y P2, y selección para el Model Registry |
+| Prueba | 1 al 30 de septiembre de 2026 | 489,298 | Medida final de baselines y candidatos de P1 y P2 |
 
-Los viajes de la tabla son los de la ingesta. Después de quitar los viajes espurios quedan 1,736,571 en entrenamiento y 471,656 en prueba.
+Los viajes de la tabla son los de la ingesta. Después de quitar los viajes espurios quedan 1,736,571 antes del corte y 471,656 en prueba. Las fechas de corte y de validación están en `mibici/config.py` (`FECHA_CORTE` y `FECHA_VALIDACION`).
 
-Reglas para que ninguna variable use información del futuro:
+Reglas para que ninguna variable use información del futuro. En las tres preguntas, la predicción se emite al cierre de su ventana más `RETRASO_DISPONIBILIDAD_SEG` (ver "Tratamiento de viajes espurios"):
 
-- **P1:** las variables del día *d* se calculan solo con datos hasta el cierre del día *d−1*: por ejemplo, las salidas de la misma hora el día anterior o el mismo día de la semana anterior.
-- **P2:** las variables de la hora *t* usan solo datos hasta *t*. La etiqueta usa *t+1* y *t+2*. Las ventanas cuya etiqueta cruza el 1 de septiembre se descartan del entrenamiento.
-- **P3:** los perfiles, el escalamiento y el agrupamiento se calculan con los viajes que inician entre el 1 de abril y el 31 de agosto. De ellos, 18 terminan el 1 de septiembre, entre las 00:00 y las 09:07, y su llegada cuenta en la proporción de salidas de su estación de destino. Son 18 de 1,736,571 viajes de entrenamiento: cambian esa proporción en 18 estaciones, en no más de 0.0002, ninguna estación cambia de grupo y la silhouette del run cambia en menos de una millonésima.
-- Los baselines de P1 y P2 no escalan ni imputan variables; el único escalamiento, el de P3, se ajusta con los perfiles de entrenamiento.
+- **P1:** la predicción del día *d* se emite al cierre del día *d−1* más el retraso, y sus variables se calculan solo con viajes iniciados antes de ese cierre: por ejemplo, las salidas de la misma hora el día anterior o el mismo día de la semana anterior. No se usa el mes como variable: entrenamiento, validación y prueba cubren meses distintos.
+- **P2:** la predicción de la hora *t* se emite al cierre de esa hora más el retraso, y sus variables usan solo datos de la hora *t* y anteriores. La etiqueta usa *t+1* y *t+2*. Las ventanas cuya etiqueta cruza el 1 de septiembre se descartan del entrenamiento; en los candidatos, que se entrenan hasta julio, también se descartan las que cruzan el 1 de agosto, para que la etiqueta de entrenamiento no use horas de validación.
+- **P3:** los perfiles se emiten el 1 de septiembre a las 00:00 más el retraso; los perfiles, el escalamiento y el agrupamiento usan sólo eventos anteriores al 1 de septiembre: las salidas por fecha de inicio y las llegadas por fecha de fin. Los 18 viajes que salen antes del corte y llegan el 1 de septiembre cuentan como salida de su origen, pero no como llegada a su destino.
+- Los baselines de P1 y P2 no escalan ni imputan variables. Los escaladores de Ridge, de la regresión logística y de los agrupamientos de P3 forman parte de su `Pipeline` y se ajustan sólo con el conjunto de entrenamiento de cada corrida.
 
 Septiembre tiene 24.3 % más viajes que agosto (489,298 frente a 393,524). Una explicación posible es el regreso a clases, pero estos datos no permiten comprobarla. Sea cual sea la causa, el mes de prueba es exigente: mide si los modelos resisten un cambio de volumen como los que encontrarán en operación.
 

@@ -2,6 +2,9 @@ name: mibici-equipo09
 
 python_env: python_env.yaml
 
+# Los valores por defecto de train son los de mibici/config.py; tests/test_mlproject.py
+# falla si alguno se desalinea. Rutas, fechas, semilla, umbrales y experimento no se
+# repiten aquí: el código los lee de mibici/config.py.
 entry_points:
   ingest:
     command: "python -m mibici.dataset"
@@ -14,14 +17,16 @@ entry_points:
   train:
     parameters:
       pregunta: {type: string}
-      modelo: {type: string, default: "auto"}
+      modelo: {type: string}
       learning_rate: {type: float, default: 0.05}
       max_iter: {type: int, default: 150}
       max_leaf_nodes: {type: int, default: 31}
       l2_regularization: {type: float, default: 0.0}
-      umbral_riesgo: {type: float, default: 0.30}
+      alpha: {type: float, default: 1.0}
+      C: {type: float, default: 1.0}
       n_clusters: {type: int, default: 5}
       batch_size: {type: int, default: 128}
+      estaciones: {type: string, default: "todas"}
     command: >-
       python -m mibici.modeling.candidates train
       --pregunta {pregunta}
@@ -30,26 +35,16 @@ entry_points:
       --max-iter {max_iter}
       --max-leaf-nodes {max_leaf_nodes}
       --l2-regularization {l2_regularization}
-      --umbral-riesgo {umbral_riesgo}
+      --alpha {alpha}
+      --C {C}
       --n-clusters {n_clusters}
       --batch-size {batch_size}
+      --estaciones {estaciones}
 
   search:
     parameters:
       pregunta: {type: string}
-      umbral_riesgo: {type: float, default: 0.30}
-    command: >-
-      python -m mibici.modeling.candidates search
-      --pregunta {pregunta}
-      --umbral-riesgo {umbral_riesgo}
+    command: "python -m mibici.modeling.candidates search --pregunta {pregunta}"
 
   register:
-    parameters:
-      p1_run_id: {type: string}
-      p2_run_id: {type: string}
-      p3_run_id: {type: string}
-    command: >-
-      python -m mibici.modeling.registry
-      --p1-run-id {p1_run_id}
-      --p2-run-id {p2_run_id}
-      --p3-run-id {p3_run_id}
+    command: "python -m mibici.modeling.registry"

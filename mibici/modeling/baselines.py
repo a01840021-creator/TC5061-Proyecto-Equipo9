@@ -45,6 +45,14 @@ def metricas_p1(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     }
 
 
+def renombrar_metricas(metricas: dict[str, float], prefijo: str) -> dict[str, float]:
+    """Cambia el prefijo ``test_`` de las métricas por otro, por ejemplo ``val``."""
+    return {
+        (f"{prefijo}_{nombre[5:]}" if nombre.startswith("test_") else f"{prefijo}_{nombre}"): valor
+        for nombre, valor in metricas.items()
+    }
+
+
 def baseline_p2_persistencia(
     df_test: pd.DataFrame, umbral_capacidad: float = UMBRAL_RIESGO_P2
 ) -> tuple[np.ndarray, np.ndarray]:
