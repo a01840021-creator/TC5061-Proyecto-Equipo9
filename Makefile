@@ -44,7 +44,13 @@ format:
 ## Run tests
 .PHONY: test
 test:
-	python -m pytest tests
+	$(PYTHON_INTERPRETER) -m pytest -q tests
+
+
+## Run DeepChecks data-quality reports on deterministic samples
+.PHONY: quality
+quality:
+	$(PYTHON_INTERPRETER) -m mibici.quality --pregunta all --max-filas 5000
 
 
 ## Set up Python interpreter environment

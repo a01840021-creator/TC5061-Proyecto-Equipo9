@@ -13,6 +13,15 @@ Proyecto integrador del equipo 9. Propone y construye una solución de Machine L
 
 	⁠*Nota:* El PR #12 se cerró sin fusionarse porque su configuración inicial fue sustituida y ampliada mediante los PR #13 y #15.
 
+### Contribuciones en la entrega 3: testing y seguridad
+
+| Integrante | Matrícula | Contribución | Evidencia |
+| --- | --- | --- | --- |
+| Carrera Rojas, Mariana Judith | A01840021 | Prueba de reproducibilidad del baseline P3 con semilla fija. | PR #18. |
+| Barranco Cruz, Luis Fernando | A01797868 | Integración de DeepChecks para nulos, duplicados y drift; pruebas sintéticas de casos normales y límite; análisis de los hallazgos de calidad. | PR de calidad de datos de esta entrega. |
+| Barrera Mendoza, José Manuel | A01797854 | Pendiente de documentar al integrar su contribución. | Pendiente. |
+| Carrera Castillo, David | A01840136 | Pendiente de documentar al integrar su contribución. | Pendiente. |
+
 ## Preguntas del proyecto
 
 | # | Pregunta | Tarea | Quién la usa |
@@ -60,7 +69,59 @@ Las corridas que se reportan se lanzan con `mlflow run` (ver [MLflow Project](#m
 | `python -m mibici.modeling.candidates search --pregunta P1` | Ejecuta la búsqueda de candidatos de una pregunta |
 | `python -m mibici.modeling.registry` | Elige y registra el champion y el challenger de cada pregunta |
 | `python -m pytest -q tests` | Ejecuta las pruebas automatizadas |
+| `python -m mibici.quality --pregunta all --max-filas 5000` | Genera reportes DeepChecks de integridad y drift |
 | `ruff check` y `ruff format --check` | Revisan el estilo del código |
+
+## Testing y calidad de datos
+
+Todas las pruebas están en `tests/` y se ejecutan con un solo comando:
+
+```bash
+python -m pytest -q tests
+```
+
+La suite cubre ingesta, *feature engineering*, baselines, candidatos, clustering,
+MLflow Project y Model Registry. Incluye casos normales y límite, como horizontes
+inválidos, viajes en el límite temporal, estaciones sin actividad, duplicados, nulos y
+drift. `test_baseline_p3_es_reproducible` entrena dos veces con la misma semilla y exige
+las mismas etiquetas y métricas; `test_muestreo_es_reproducible_y_valida_el_limite`
+comprueba que la muestra de calidad también sea determinista.
+
+### Validación con DeepChecks
+
+Primero deben existir `data/processed/viajes.parquet` y
+`data/processed/estaciones.parquet`. Después se validan P1 y P2 con muestras de hasta
+5,000 filas por partición:
+
+```bash
+python -m mibici.quality --pregunta all --max-filas 5000
+```
+
+El comando ejecuta las suites `data_integrity` y `train_test_validation` sobre la
+partición temporal, y genera HTML y un resumen JSON en `reports/deepchecks/p1/` y
+`reports/deepchecks/p2/`. Los reportes locales revisan esquema, tipos, valores faltantes,
+duplicados, distribución y drift entre entrenamiento y prueba. La muestra usa
+`SEMILLA=42`, por lo que dos ejecuciones sobre la misma versión de datos seleccionan las
+mismas filas. Los reportes se excluyen de Git porque pueden contener ejemplos derivados
+de los datos; en el repositorio sólo se conserva la captura sin registros individuales.
+
+El drift no se oculta ni se considera automáticamente un error: al dividir por tiempo es
+posible que agosto/septiembre difieran de meses anteriores. Se documenta como señal para
+investigar y monitorear antes de promover un modelo.
+
+Los resultados obtenidos, su interpretación y las decisiones de tratamiento están en
+[`references/calidad_datos.md`](references/calidad_datos.md).
+
+### Evidencia que se conserva en el README
+
+Antes de entregar, el equipo agrega capturas legibles en `reports/figures/` con estos
+nombres y sustituye los marcadores siguientes:
+
+- `evidencia_pytest.png`: terminal con todas las pruebas aprobadas.
+- `evidencia_deepchecks.png`: resumen de integridad y drift.
+
+> **PENDIENTE ANTES DE ENTREGAR:** insertar aquí las dos capturas, después de ejecutar
+> los comandos desde el commit final de `main`.
 
 ## MLflow Project y tracking avanzado
 
@@ -181,7 +242,7 @@ La justificación de cada modelo y de cada métrica según la decisión que apoy
 ├── models/                  modelos entrenados, no se versionan
 ├── notebooks/               solo exploración: 1.0-dcc-exploracion-inicial.ipynb
 ├── references/              manifiesto de datos, ML Canvas, definición de datos,
-│                            modelos y métricas, y diagrama de arquitectura
+│                            modelos, métricas, arquitectura y calidad de datos
 ├── reports/figures/         figuras generadas
 ├── MLproject                puntos de entrada de mlflow run
 ├── python_env.yaml          entorno de mlflow run
@@ -190,6 +251,7 @@ La justificación de cada modelo y de cada métrica según la decisión que apoy
     ├── config.py            rutas, URLs, fechas, partición, umbrales, semilla y MLflow
     ├── dataset.py           ingesta reproducible
     ├── features.py          ingeniería de variables
+    ├── quality.py           validación de integridad y drift con DeepChecks
     ├── modeling/
     │   ├── artifacts.py     gráficas y tablas registradas en MLflow
     │   ├── baselines.py     reglas base y métricas de P1, P2 y P3
@@ -214,6 +276,7 @@ La justificación de cada modelo y de cada métrica según la decisión que apoy
 | Estructura y código | Configuración en un solo lugar | Para el flujo de ingesta, construcción de variables y experimento, `mibici/config.py` concentra su propia ruta (que los candidatos registran como artefacto), las carpetas de datos, las rutas de los Parquet procesados, las URLs, las fechas, el corte de partición y el de validación, el retraso entre el cierre de cada ventana y la emisión de su predicción, que es también la duración mínima de un viaje válido, el umbral, el horizonte y el umbral de decisión de P2, los hiperparámetros por defecto de los modelos, el criterio de estación activa de P3, la semilla, el nombre del experimento, la URI de tracking, los nombres de los modelos registrados y la métrica de selección de cada pregunta. Los periodos que se registran en MLflow se derivan de esas constantes. El nombre local de cada CSV crudo se arma en `mibici/dataset.py` con la clave del mes. `mibici/modeling/predict.py` y `mibici/plots.py` son plantillas de Cookiecutter sin usar y conservan sus rutas de ejemplo. |
 | Estructura y código | Dependencias con versión fija y entorno reproducible | `requirements.txt` fija con `==` cada paquete; la instalación con Python 3.10 está en [Instalación](#instalación). |
 | Datos y Git | Ningún dato, modelo, carpeta de MLflow ni credencial en el historial | `.gitignore` excluye `/data/`, `*.parquet`, `datos_abiertos_*.csv`, `mlruns/`, `mlartifacts/`, `mlflow.db`, `models/*`, `*.pkl`, `*.joblib`, `*.skops` y `.env`. Los datos se versionan con su hash en `references/manifiesto_datos.json`, no con los archivos. |
+| Testing | Pruebas repetibles con casos normales y límite | `tests/` se ejecuta con PyTest; incluye reproducibilidad del entrenamiento con semilla fija y validaciones sintéticas que demuestran que DeepChecks detecta nulos, duplicados y drift. |
 | Datos y Git | Todo cambio entra a `main` por Pull Request revisado | La rama `main` está protegida con un ruleset que exige un Pull Request con al menos una aprobación e impide el push directo y el borrado. Ver [Flujo de trabajo con Git](#flujo-de-trabajo-con-git). |
 
 ## Flujo de trabajo con Git
