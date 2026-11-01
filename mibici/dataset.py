@@ -42,6 +42,7 @@ COLUMNAS_VIAJES = [
 # Datos personales que ninguna de las tres preguntas del proyecto necesita
 COLUMNAS_PERSONALES = ["usuario_id", "genero", "anio_de_nacimiento"]
 COLUMNAS_FECHA = ["inicio_del_viaje", "fin_del_viaje"]
+FORMATO_FECHA = "%Y-%m-%d %H:%M:%S"
 COLUMNAS_ID_VIAJES = ["viaje_id", "origen_id", "destino_id"]
 
 COLUMNAS_ESTACIONES = ["id", "name", "latitude", "longitude", "dpcapacity"]
@@ -125,7 +126,7 @@ def procesar_viajes(ruta: Path) -> pd.DataFrame:
     validar_columnas(df, COLUMNAS_VIAJES, ruta.name)
     df = df[COLUMNAS_VIAJES].copy()
     for col in COLUMNAS_FECHA:
-        df[col] = pd.to_datetime(df[col], format="%Y-%m-%d %H:%M:%S")
+        df[col] = pd.to_datetime(df[col], format=FORMATO_FECHA)
     a_entero(df, COLUMNAS_ID_VIAJES, ruta.name)
     return df
 
