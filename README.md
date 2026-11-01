@@ -18,9 +18,9 @@ Proyecto integrador del equipo 9. Propone y construye una solución de Machine L
 | Integrante | Matrícula | Contribución | Evidencia |
 | --- | --- | --- | --- |
 | Carrera Rojas, Mariana Judith | A01840021 | Prueba de reproducibilidad del baseline P3 con semilla fija. | PR #18. |
-| Barranco Cruz, Luis Fernando | A01797868 | Integración de DeepChecks para nulos, duplicados y drift; pruebas sintéticas de casos normales y límite; análisis de los hallazgos de calidad. | PR de calidad de datos de esta entrega. |
+| Barranco Cruz, Luis Fernando | A01797868 | Integración de DeepChecks para nulos, duplicados y drift; pruebas sintéticas de casos normales y límite; análisis de los hallazgos de calidad. | PR #19. |
 | Barrera Mendoza, José Manuel | A01797854 | Pendiente de documentar al integrar su contribución. | Pendiente. |
-| Carrera Castillo, David | A01840136 | Pendiente de documentar al integrar su contribución. | Pendiente. |
+| Carrera Castillo, David | A01840136 | Análisis estático de código con Bandit, auditoría de vulnerabilidades con pip-audit, desacoplamiento de credenciales (.env.example y .gitignore) y documentación de riesgo residual. | PR #20; revisión aprobatoria del PR #19. |
 
 ## Preguntas del proyecto
 
@@ -70,6 +70,9 @@ Las corridas que se reportan se lanzan con `mlflow run` (ver [MLflow Project](#m
 | `python -m mibici.modeling.registry` | Elige y registra el champion y el challenger de cada pregunta |
 | `python -m pytest -q tests` | Ejecuta las pruebas automatizadas |
 | `python -m mibici.quality --pregunta all --max-filas 5000` | Genera reportes DeepChecks de integridad y drift |
+| `bandit -c .bandit -r mibici/ tests/` | Ejecuta el análisis estático de seguridad (SAST) |
+| `pip-audit --local` | Audita vulnerabilidades conocidas en dependencias (SCA) |
+| `make security` | Ejecuta la suite combinada de seguridad |
 | `ruff check` y `ruff format --check` | Revisan el estilo del código |
 
 ## Testing y calidad de datos
@@ -119,9 +122,42 @@ nombres y sustituye los marcadores siguientes:
 
 - `evidencia_pytest.png`: terminal con todas las pruebas aprobadas.
 - `evidencia_deepchecks.png`: resumen de integridad y drift.
+- `evidencia_seguridad.png`: terminal con la ejecución exitosa de Bandit y pip-audit.
 
-> **PENDIENTE ANTES DE ENTREGAR:** insertar aquí las dos capturas, después de ejecutar
+> **PENDIENTE ANTES DE ENTREGAR:** insertar aquí las capturas, después de ejecutar
 > los comandos desde el commit final de `main`.
+
+## Seguridad y gestión de riesgos
+
+El proyecto incorpora prácticas de seguridad estática (SAST), análisis de composición de software (SCA) y políticas de privacidad para asegurar que el repositorio no exponga secretos ni vulnerabilidades críticas:
+
+### 1. Protección de credenciales y privacidad de datos
+
+- **Aislamiento de configuración:** Las variables de entorno se declaran en `.env.example` y se cargan localmente sin comprometer credenciales en el repositorio.
+- **Políticas en `.gitignore`:** Se excluyen explícitamente archivos `.env`, llaves, certificados, secretos (`*.pem`, `*.key`, `credentials.json`), bases de datos locales (`mlflow.db`) y modelos serializados.
+- **Minimización de datos y PII:** Los datos abiertos de MiBici carecen de información personal identificable (nombres, teléfonos, tarjetas bancarias o domicilios), garantizando la privacidad de los usuarios conforme a principios de privacidad por diseño.
+
+### 2. Análisis estático con Bandit
+
+Se ejecuta sobre el código fuente en `mibici/` y las pruebas en `tests/`:
+
+```bash
+bandit -c .bandit -r mibici/ tests/
+```
+
+La configuración en `.bandit` audita el proyecto reportando 0 vulnerabilidades de severidad media y alta, justificando las exclusiones habituales de testing (`B101`) y el uso seguro de `subprocess` en `train.py` para consultar el SHA de Git sin interacción de usuario (`B404`, `B603`, `B607`).
+
+### 3. Auditoría de dependencias con pip-audit
+
+Escanea el entorno frente a las bases de vulnerabilidades de PyPI y OSV:
+
+```bash
+pip-audit --local
+```
+
+Se remediaron paquetes clave (`certifi` a 2026.10.23, `mlflow` a 3.17.2 y `pyasn1` a 0.6.5). El riesgo residual de dependencias con avisos pendientes restringidas por Python 3.10 (`pillow`, `tornado`, `filelock`) fue modelado y justificado técnicamente, sin representar una superficie de ataque explotable.
+
+El reporte completo de seguridad, modelado de amenazas (OWASP ML Top 10 y NIST AI RMF) y matriz de riesgo residual se encuentra en [`references/seguridad.md`](references/seguridad.md).
 
 ## MLflow Project y tracking avanzado
 
@@ -242,7 +278,7 @@ La justificación de cada modelo y de cada métrica según la decisión que apoy
 ├── models/                  modelos entrenados, no se versionan
 ├── notebooks/               solo exploración: 1.0-dcc-exploracion-inicial.ipynb
 ├── references/              manifiesto de datos, ML Canvas, definición de datos,
-│                            modelos, métricas, arquitectura y calidad de datos
+│                            modelos, métricas, arquitectura, calidad de datos y seguridad
 ├── reports/figures/         figuras generadas
 ├── MLproject                puntos de entrada de mlflow run
 ├── python_env.yaml          entorno de mlflow run

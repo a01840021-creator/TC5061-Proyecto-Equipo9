@@ -53,6 +53,22 @@ quality:
 	$(PYTHON_INTERPRETER) -m mibici.quality --pregunta all --max-filas 5000
 
 
+## Run security analysis (Bandit SAST and pip-audit SCA)
+.PHONY: security
+security:
+	bandit -c .bandit -r mibici/ tests/
+	pip-audit -l
+
+
+## Generate detailed security reports in reports/security/
+.PHONY: security-report
+security-report:
+	mkdir -p reports/security
+	bandit -c .bandit -r mibici/ tests/ -f txt -o reports/security/bandit_report.txt || true
+	pip-audit -l -f markdown -o reports/security/pip_audit_report.md || true
+	@echo "Security reports generated in reports/security/"
+
+
 ## Set up Python interpreter environment
 .PHONY: create_environment
 create_environment:

@@ -1,0 +1,15 @@
+# Configuración de análisis estático de seguridad con Bandit para MiBici
+# Exclusiones de reglas con justificación técnica y análisis de riesgo residual:
+# - B101: assert_used (se usa en validaciones internas y tests de integridad).
+# - B404, B603, B607: uso controlado de subprocess en train.py para recuperar commit SHA de Git con argumentos fijos y sin shell=True.
+
+skips:
+  - "B101"
+  - "B404"
+  - "B603"
+  - "B607"
+
+exclude_dirs:
+  - ".venv"
+  - "mlruns"
+  - "mlartifacts"
