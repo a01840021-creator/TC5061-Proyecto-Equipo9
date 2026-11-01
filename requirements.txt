@@ -18,6 +18,8 @@ bandit==1.9.4
 beautifulsoup4==4.15.0
 bleach==6.4.0
 blinker==1.9.0
+boolean-py==5.0
+cachecontrol==0.14.4
 cachetools==7.2.3
 category-encoders==2.8.1
 certifi==2026.10.23
@@ -29,6 +31,7 @@ comm==0.2.3
 contourpy==1.3.2
 cryptography==50.0.2
 cycler==0.12.1
+cyclonedx-python-lib==11.12.0
 databricks-sdk==0.153.0
 debugpy==1.8.22
 decorator==5.3.1
@@ -39,6 +42,7 @@ exceptiongroup==1.3.1
 executing==2.3.0
 fastapi==0.143.3
 fastjsonschema==2.22.2
+filelock==4.1.0
 flask==3.1.3
 flask-cors==6.0.5
 fonttools==4.65.0
@@ -87,6 +91,7 @@ jupyterlab-server==2.28.1
 jupyterlab-widgets==3.0.17
 kiwisolver==1.5.1
 lark==1.3.1
+license-expression==30.4.4
 loguru==0.7.3
 mako==1.4.3
 markdown-it-py==4.2.0
@@ -98,6 +103,7 @@ mistune==3.3.4
 mlflow==3.17.2
 mlflow-skinny==3.17.2
 mlflow-tracing==3.17.2
+msgpack==1.2.4
 multidict==7.1.0
 narwhals==2.28.0
 nbclient==0.11.0
@@ -112,6 +118,7 @@ opentelemetry-proto==1.45.1
 opentelemetry-sdk==1.45.1
 opentelemetry-semantic-conventions==0.66b1
 overrides==7.7.0
+packageurl-python==0.17.6
 packaging==26.3
 pandas==2.3.3
 pandocfilters==1.5.1
@@ -120,7 +127,9 @@ patsy==1.0.3
 pexpect==4.9.0
 pillow==12.3.0
 pip==26.2.1
+pip-api==0.0.35
 pip-audit==2.10.1
+pip-requirements-parser==32.0.1
 platformdirs==4.12.4
 pluggy==1.7.0
 plotly==7.1.0
@@ -132,6 +141,7 @@ protobuf==7.36.2
 psutil==7.2.2
 ptyprocess==0.7.0
 pure-eval==0.2.4
+py-serializable==2.1.0
 pyarrow==25.0.1
 pyasn1==0.6.5
 pyasn1-modules==0.4.2
@@ -165,16 +175,19 @@ shellingham==1.5.4
 six==1.17.0
 skops==0.16.0
 smmap==5.0.3
+sortedcontainers==2.4.0
 soupsieve==2.10
 sqlalchemy==2.0.55
 sqlparse==0.6.0
 stack-data==0.6.3
 starlette==1.7.0
 statsmodels==0.15.0
+stevedore==5.8.0
 terminado==0.18.1
 threadpoolctl==3.7.0
 tinycss2==1.5.1
 tomli==2.5.0
+tomli-w==1.2.0
 tornado==6.5.10
 tqdm==4.70.1
 traitlets==5.16.1

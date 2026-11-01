@@ -71,8 +71,8 @@ Las corridas que se reportan se lanzan con `mlflow run` (ver [MLflow Project](#m
 | `python -m pytest -q tests` | Ejecuta las pruebas automatizadas |
 | `python -m mibici.quality --pregunta all --max-filas 5000` | Genera reportes DeepChecks de integridad y drift |
 | `bandit -c .bandit -r mibici/ tests/` | Ejecuta el análisis estático de seguridad (SAST) |
-| `pip-audit --local` | Audita vulnerabilidades conocidas en dependencias (SCA) |
-| `make security` | Ejecuta la suite combinada de seguridad |
+| `pip-audit -r requirements.txt --no-deps --disable-pip` | Audita las versiones fijadas en `requirements.txt` (SCA); lista también el riesgo aceptado |
+| `make security` | Ejecuta Bandit y pip-audit con el riesgo aceptado declarado en el `Makefile`; termina en éxito si no hay hallazgos nuevos |
 | `ruff check` y `ruff format --check` | Revisan el estilo del código |
 
 ## Testing y calidad de datos
@@ -129,35 +129,39 @@ nombres y sustituye los marcadores siguientes:
 
 ## Seguridad y gestión de riesgos
 
-El proyecto incorpora prácticas de seguridad estática (SAST), análisis de composición de software (SCA) y políticas de privacidad para asegurar que el repositorio no exponga secretos ni vulnerabilidades críticas:
+El repositorio revisa tres cosas: qué configuración y qué datos podrían filtrarse, qué patrones inseguros tiene el código (Bandit) y qué vulnerabilidades conocidas tienen las dependencias fijadas (pip-audit). Los dos análisis corren con un solo comando:
 
-### 1. Protección de credenciales y privacidad de datos
+```bash
+make security
+```
 
-- **Aislamiento de configuración:** Las variables de entorno se declaran en `.env.example` y se cargan localmente sin comprometer credenciales en el repositorio.
-- **Políticas en `.gitignore`:** Se excluyen explícitamente archivos `.env`, llaves, certificados, secretos (`*.pem`, `*.key`, `credentials.json`), bases de datos locales (`mlflow.db`) y modelos serializados.
-- **Minimización de datos y PII:** Los datos abiertos de MiBici carecen de información personal identificable (nombres, teléfonos, tarjetas bancarias o domicilios), garantizando la privacidad de los usuarios conforme a principios de privacidad por diseño.
+### 1. Configuración y datos personales
+
+- **Variables de entorno.** El código lee tres variables, todas con un valor por omisión en `mibici/config.py` y ninguna secreta: `MLFLOW_TRACKING_URI` (`http://127.0.0.1:5000`), `LOGURU_LEVEL` (`INFO`) y `LOGURU_COLORIZE` (`True`). Son las únicas que aparecen en `.env.example`.
+- **`.gitignore`.** Excluye `.env` y `.env.*` (salvo `.env.example`), llaves y certificados (`*.pem`, `*.key`, `*.crt`, `*.pfx`, `*.p12`), archivos de credenciales (`credentials.json`, `client_secret*.json`, `token.json`, `secrets.json`), las bases y carpetas de MLflow (`mlflow.db`, `*.db`, `mlruns/`, `mlartifacts/`), los modelos serializados, los datos (`/data/`, `*.parquet`, `datos_abiertos_*.csv`) y los reportes locales.
+- **Minimización en la ingesta.** Los datos abiertos de MiBici traen `usuario_id`, `genero` y `anio_de_nacimiento`. Ninguna pregunta los necesita, así que `mibici/dataset.py` los elimina en la ingesta (`COLUMNAS_PERSONALES`) después de usarlos solo para detectar duplicados exactos. No llegan a los Parquet procesados, a MLflow ni al repositorio; los CSV crudos que sí los contienen se quedan en `data/raw/`, fuera de Git.
 
 ### 2. Análisis estático con Bandit
-
-Se ejecuta sobre el código fuente en `mibici/` y las pruebas en `tests/`:
 
 ```bash
 bandit -c .bandit -r mibici/ tests/
 ```
 
-La configuración en `.bandit` audita el proyecto reportando 0 vulnerabilidades de severidad media y alta, justificando las exclusiones habituales de testing (`B101`) y el uso seguro de `subprocess` en `train.py` para consultar el SHA de Git sin interacción de usuario (`B404`, `B603`, `B607`).
+`.bandit` no omite reglas de forma global. `B101` (`assert_used`) se omite solo en `tests/test_*.py`, donde pytest usa `assert`; en `mibici/` no hay asserts. Las dos llamadas a `git` de `mibici/modeling/train.py` (para registrar el autor y el commit de cada corrida) llevan `# nosec` con el código exacto de la regla (`B404` en el import de `subprocess`, `B603` y `B607` en cada llamada), porque usan una lista fija de argumentos, sin shell y sin datos de usuario.
+
+Última corrida: 2,446 líneas escaneadas (2,094 en `mibici/` y 352 en `tests/`), 0 hallazgos de severidad alta, media o baja, 5 hallazgos omitidos por `# nosec` con código y ningún aviso de `nosec` en consola.
 
 ### 3. Auditoría de dependencias con pip-audit
 
-Escanea el entorno frente a las bases de vulnerabilidades de PyPI y OSV:
-
 ```bash
-pip-audit --local
+pip-audit -r requirements.txt --no-deps --disable-pip
 ```
 
-Se remediaron paquetes clave (`certifi` a 2026.10.23, `mlflow` a 3.17.2 y `pyasn1` a 0.6.5). El riesgo residual de dependencias con avisos pendientes restringidas por Python 3.10 (`pillow`, `tornado`, `filelock`) fue modelado y justificado técnicamente, sin representar una superficie de ataque explotable.
+La auditoría lee las versiones fijadas en `requirements.txt`, no el entorno local. La actualización de `certifi` (a 2026.10.23), `mlflow` (a 3.17.2) y `pyasn1` (a 0.6.5) corrigió seis vulnerabilidades: PYSEC-2026-4320, CVE-2026-53995 y CVE-2026-119194 a CVE-2026-119197.
 
-El reporte completo de seguridad, modelado de amenazas (OWASP ML Top 10 y NIST AI RMF) y matriz de riesgo residual se encuentra en [`references/seguridad.md`](references/seguridad.md).
+Quedan 59 vulnerabilidades en `pillow` 12.3.0 (39), `tornado` 6.5.10 (3) y `filelock` 4.1.0 (17), cuyas versiones corregidas exigen Python 3.11 o superior. Se aceptan de forma explícita: cada identificador está en el `Makefile` y `make security` lo pasa a pip-audit con `--ignore-vuln`, así que el comando falla si encuentra una vulnerabilidad cuyo identificador no está en esa lista. Las excepciones se revisan cuando cambian las versiones de las dependencias. El proyecto no abre imágenes (solo guarda PNG con matplotlib), Tornado solo corre al levantar Jupyter en la máquina local y `filelock` solo lo usa la caché HTTP de pip-audit.
+
+El detalle de la configuración, los identificadores, el análisis de superficie de ataque y la relación con OWASP ML Top 10 y NIST AI RMF está en [`references/seguridad.md`](references/seguridad.md).
 
 ## MLflow Project y tracking avanzado
 

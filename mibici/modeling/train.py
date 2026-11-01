@@ -6,7 +6,7 @@ import gc
 import getpass
 import json
 from pathlib import Path
-import subprocess
+import subprocess  # nosec B404  # solo para git rev-parse HEAD y git config user.name
 import tempfile
 
 import mlflow
@@ -62,9 +62,11 @@ app = typer.Typer(add_completion=False)
 def obtener_autor() -> str:
     """Nombre de Git (`user.name`) de quien ejecuta; si no hay, el usuario del sistema."""
     try:
-        nombre = subprocess.check_output(
+        # Lista fija de argumentos, sin shell y sin datos de usuario
+        salida = subprocess.check_output(  # nosec B603, B607  # solo lee git config user.name
             ["git", "config", "user.name"], cwd=PROJ_ROOT, text=True
-        ).strip()
+        )
+        nombre = salida.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         nombre = ""
     return nombre or getpass.getuser()
@@ -73,9 +75,11 @@ def obtener_autor() -> str:
 def obtener_commit_git() -> str:
     """Devuelve el SHA del commit que produjo la corrida."""
     try:
-        return subprocess.check_output(
+        # Lista fija de argumentos, sin shell y sin datos de usuario
+        salida = subprocess.check_output(  # nosec B603, B607  # solo lee git rev-parse HEAD
             ["git", "rev-parse", "HEAD"], cwd=PROJ_ROOT, text=True
-        ).strip()
+        )
+        return salida.strip()
     except (subprocess.CalledProcessError, FileNotFoundError):
         return "desconocido"
 

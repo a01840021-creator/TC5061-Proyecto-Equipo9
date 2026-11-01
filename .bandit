@@ -1,15 +1,19 @@
-# Configuración de análisis estático de seguridad con Bandit para MiBici
-# Exclusiones de reglas con justificación técnica y análisis de riesgo residual:
-# - B101: assert_used (se usa en validaciones internas y tests de integridad).
-# - B404, B603, B607: uso controlado de subprocess en train.py para recuperar commit SHA de Git con argumentos fijos y sin shell=True.
-
-skips:
-  - "B101"
-  - "B404"
-  - "B603"
-  - "B607"
+# Configuración de Bandit para MiBici. Se ejecuta desde la raíz del repositorio:
+#   bandit -c .bandit -r mibici/ tests/
+#
+# No hay reglas omitidas de forma global. Las excepciones son puntuales:
+# - B101 (assert_used) solo se omite en los archivos de prueba de tests/, donde assert es
+#   la forma en que pytest verifica resultados. En mibici/ no hay asserts y la regla aplica.
+# - B404, B603 y B607 se omiten línea por línea con "# nosec" en mibici/modeling/train.py,
+#   donde subprocess ejecuta git con una lista fija de argumentos, sin shell y sin datos de
+#   usuario, para leer git rev-parse HEAD y git config user.name.
 
 exclude_dirs:
   - ".venv"
   - "mlruns"
   - "mlartifacts"
+
+# El patrón se compara con la ruta tal como Bandit la recibe (relativa a la raíz)
+assert_used:
+  skips:
+    - "tests/test_*.py"
