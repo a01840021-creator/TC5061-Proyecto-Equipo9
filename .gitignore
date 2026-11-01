@@ -205,3 +205,6 @@ models/*
 # Datos de MiBici fuera de data/
 *.parquet
 datos_abiertos_*.csv
+
+# Reportes locales generados por DeepChecks y herramientas de seguridad
+reports/deepchecks/
