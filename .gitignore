@@ -144,8 +144,19 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
+# Environments & Secrets
 .env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+credentials.json
+client_secret*.json
+token.json
+secrets.json
 .venv
 env/
 venv/
@@ -208,3 +219,4 @@ datos_abiertos_*.csv
 
 # Reportes locales generados por DeepChecks y herramientas de seguridad
 reports/deepchecks/
+reports/security/
