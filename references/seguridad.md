@@ -1,7 +1,7 @@
 # Reporte de Seguridad, Análisis de Vulnerabilidades y Riesgo Residual
 
 **Proyecto:** Sistema Inteligente para MiBici Guadalajara (TC5061 - Equipo 9)  
-**Responsable:** David Carrera Castillo (A01840136) — Participación 3: Seguridad  
+**Responsable:** David Carrera Castillo (A01840136)  
 **Fecha:** Noviembre 2026  
 **Entorno de ejecución:** Python 3.10 | macOS / Linux  
 

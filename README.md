@@ -18,9 +18,9 @@ Proyecto integrador del equipo 9. Propone y construye una solución de Machine L
 | Integrante | Matrícula | Contribución | Evidencia |
 | --- | --- | --- | --- |
 | Carrera Rojas, Mariana Judith | A01840021 | Prueba de reproducibilidad del baseline P3 con semilla fija. | PR #18. |
-| Barranco Cruz, Luis Fernando | A01797868 | Integración de DeepChecks para nulos, duplicados y drift; pruebas sintéticas de casos normales y límite; análisis de los hallazgos de calidad. | PR de calidad de datos de esta entrega. |
+| Barranco Cruz, Luis Fernando | A01797868 | Integración de DeepChecks para nulos, duplicados y drift; pruebas sintéticas de casos normales y límite; análisis de los hallazgos de calidad. | PR #19. |
 | Barrera Mendoza, José Manuel | A01797854 | Pendiente de documentar al integrar su contribución. | Pendiente. |
-| Carrera Castillo, David | A01840136 | Pendiente de documentar al integrar su contribución. | Pendiente. |
+| Carrera Castillo, David | A01840136 | Análisis estático de código con Bandit, auditoría de vulnerabilidades con pip-audit, desacoplamiento de credenciales (.env.example y .gitignore) y documentación de riesgo residual. | PR #20; revisión aprobatoria del PR #19. |
 
 ## Preguntas del proyecto
 
