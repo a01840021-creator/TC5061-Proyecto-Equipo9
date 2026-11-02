@@ -68,7 +68,7 @@ Comando: `bandit -c .bandit -r mibici/ tests/`. La salida completa queda en `rep
 
 | Métrica | Valor |
 | :--- | :--- |
-| Líneas de código escaneadas | 2,446 (2,094 en `mibici/` y 352 en `tests/`) |
+| Líneas de código escaneadas | 4,455 (2,476 en `mibici/` y 1,979 en `tests/`) |
 | Hallazgos de severidad alta | 0 |
 | Hallazgos de severidad media | 0 |
 | Hallazgos de severidad baja | 0 |
@@ -77,7 +77,7 @@ Comando: `bandit -c .bandit -r mibici/ tests/`. La salida completa queda en `rep
 | Archivos omitidos | 0 |
 | Código de salida | 0 |
 
-Como referencia, la misma corrida sin `assert_used.skips` y sin los comentarios `# nosec` reporta 61 hallazgos de severidad baja: 56 de `B101`, todos en `tests/`, y los 5 de `subprocess` en `train.py`.
+Como referencia, la misma corrida sin `assert_used.skips` y sin los comentarios `# nosec` (`bandit -r mibici/ tests/ --ignore-nosec`) reporta 350 hallazgos de severidad baja: 345 de `B101`, todos en `tests/`, y los 5 de `subprocess` en `train.py`.
 
 Bandit no escribe en la consola ningún aviso del tipo "nosec encountered, but no failed test". En las dos llamadas a `git`, la salida de `subprocess.check_output` se guarda primero en la variable `salida` y `.strip()` se aplica en una línea aparte. Así, la línea que lleva `# nosec B603, B607` contiene una sola llamada, que es la que Bandit señala.
 
@@ -148,7 +148,7 @@ Control compensatorio: no abrir con el entorno del proyecto imágenes de origen 
 
 - GOVERN. Los cambios entran a `main` por pull request, y la tabla de contribuciones del README registra quién hizo cada parte y qué revisiones aprobó.
 - MAP. Este documento enumera las dependencias con vulnerabilidades conocidas, quién las instala y qué parte del proyecto las usa.
-- MEASURE. Bandit reporta 0 hallazgos con 5 omisiones justificadas por línea; pip-audit reporta 0 vulnerabilidades fuera de las 59 aceptadas; pytest aprueba 40 de 40 pruebas; DeepChecks genera reportes de integridad y drift.
+- MEASURE. Bandit reporta 0 hallazgos con 5 omisiones justificadas por línea; pip-audit reporta 0 vulnerabilidades fuera de las 59 aceptadas; pytest aprueba 220 de 220 pruebas; DeepChecks genera reportes de integridad y drift de P1, P2, P3 y del dataset base.
 - MANAGE. El riesgo residual está declarado identificador por identificador en el `Makefile`, con su control compensatorio y la condición para retirarlo.
 
 ## 6. Reproducción

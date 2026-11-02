@@ -1,26 +1,39 @@
 # MiBici: demanda, riesgo de rebalanceo y patrones de uso
 
+[![CI](https://github.com/a01840021-creator/TC5061-Proyecto-Equipo9/actions/workflows/ci.yml/badge.svg)](https://github.com/a01840021-creator/TC5061-Proyecto-Equipo9/actions/workflows/ci.yml)
+
 Proyecto integrador del equipo 9. Propone y construye una solución de Machine Learning sobre los datos abiertos de MiBici, el sistema de bicicleta pública del Área Metropolitana de Guadalajara, para responder tres preguntas de operación.
 
-### Contribuciones en la entrega 2: MLflow Project y tracking avanzado
+## Integrantes
+
+### Entrega 1: propuesta y base reproducible
+
+| Matrícula | Nombre | Contribución |
+| --- | --- | --- |
+| A01840021 | Carrera Rojas, Mariana Judith | Configuración inicial: estructura con Cookiecutter Data Science, repositorio en GitHub y protección de la rama principal |
+| A01797854 | Barrera Mendoza, José Manuel | Formulación del problema y ML Canvas, definición de los datos, dependencias con versión fija, ingesta reproducible y versionado de datos, flujo de trabajo con Git |
+| A01797868 | Barranco Cruz, Luis Fernando | Implementación de los baselines P1, P2 y P3; instrumentación con MLflow Tracking; métricas, artefactos y pruebas automatizadas |
+| A01840136 | Carrera Castillo, David | Análisis exploratorio, módulo reutilizable de feature engineering sin fuga temporal y diagrama de arquitectura |
+
+### Entrega 2: MLflow Project y tracking avanzado
 
 | Integrante | Matrícula | Contribución | Evidencia |
 | --- | --- | --- | --- |
-| Carrera Rojas, Mariana Judith | A01840021 | Configuración inicial del MLflow Project, con los primeros puntos de entrada en ⁠ MLproject ⁠ y la declaración del entorno en ⁠ python_env.yaml ⁠; revisión del reporte final y actualización de la documentación. | PR #12 —propuesta inicial posteriormente sustituida y cerrada sin fusionar— y revisión aprobatoria del PR #16. |
-| Barrera Mendoza, José Manuel | A01797854 | Modelos candidatos por algoritmo, corrección de fugas temporales en P2 y P3, selección automática mediante los aliases ⁠ champion ⁠ y ⁠ challenger ⁠, linaje en Model Registry, corridas finales y reporte. | PR #15 y #16; revisión aprobatoria del PR #14. |
+| Carrera Rojas, Mariana Judith | A01840021 | Configuración inicial del MLflow Project, con los primeros puntos de entrada en `MLproject` y la declaración del entorno en `python_env.yaml`; revisión del reporte final y actualización de la documentación. | PR #12 (propuesta inicial, posteriormente sustituida y cerrada sin fusionar) y revisión aprobatoria del PR #16. |
+| Barrera Mendoza, José Manuel | A01797854 | Modelos candidatos por algoritmo, corrección de fugas temporales en P2 y P3, selección automática mediante los aliases `champion` y `challenger`, linaje en Model Registry, corridas finales y reporte. | PR #15 y #16; revisión aprobatoria del PR #14. |
 | Barranco Cruz, Luis Fernando | A01797868 | MLflow Project con puntos de entrada parametrizados, búsquedas con nested runs, registro estructurado de artefactos y primera automatización del Model Registry. | PR #13; revisión aprobatoria del PR #15. |
 | Carrera Castillo, David | A01840136 | Primera versión del reporte de experimentos e integración de capturas y evidencias de MLflow. | PR #14; revisión aprobatoria del PR #13. |
 
-	⁠*Nota:* El PR #12 se cerró sin fusionarse porque su configuración inicial fue sustituida y ampliada mediante los PR #13 y #15.
+*Nota:* El PR #12 se cerró sin fusionarse porque su configuración inicial fue sustituida y ampliada mediante los PR #13 y #15.
 
-### Contribuciones en la entrega 3: testing y seguridad
+### Entrega 3: pruebas, calidad de datos y seguridad
 
 | Integrante | Matrícula | Contribución | Evidencia |
 | --- | --- | --- | --- |
-| Carrera Rojas, Mariana Judith | A01840021 | Prueba de reproducibilidad del baseline P3 con semilla fija. | PR #18. |
-| Barranco Cruz, Luis Fernando | A01797868 | Integración de DeepChecks para nulos, duplicados y drift; pruebas sintéticas de casos normales y límite; análisis de los hallazgos de calidad. | PR #19. |
-| Barrera Mendoza, José Manuel | A01797854 | Pendiente de documentar al integrar su contribución. | Pendiente. |
-| Carrera Castillo, David | A01840136 | Análisis estático de código con Bandit, auditoría de vulnerabilidades con pip-audit, desacoplamiento de credenciales (.env.example y .gitignore) y documentación de riesgo residual. | PR #20; revisión aprobatoria del PR #19. |
+| Carrera Rojas, Mariana Judith | A01840021 | Prueba de reproducibilidad del baseline de P3 con semilla fija. | PR #18. |
+| Barranco Cruz, Luis Fernando | A01797868 | Integración de DeepChecks para P1 y P2 (nulos, duplicados y drift), pruebas sintéticas e interpretación de hallazgos. | PR #19 y revisión aprobatoria del PR #18. |
+| Barrera Mendoza, José Manuel | A01797854 | Corrección de los chequeos de seguridad y fijación completa de dependencias (PR #21); pruebas de reproducibilidad del entrenamiento, pruebas de la ingesta, cobertura de funciones clave, DeepChecks para P3 y el dataset base, workflow de integración continua y evidencia (PR #22). | PR #21 y #22; revisión aprobatoria del PR #20. |
+| Carrera Castillo, David | A01840136 | Bandit, pip-audit, `.env.example`, exclusiones de `.gitignore` y reporte de riesgo residual. | PR #20 y revisión aprobatoria del PR #19. |
 
 ## Preguntas del proyecto
 
@@ -69,13 +82,15 @@ Las corridas que se reportan se lanzan con `mlflow run` (ver [MLflow Project](#m
 | `python -m mibici.modeling.candidates search --pregunta P1` | Ejecuta la búsqueda de candidatos de una pregunta |
 | `python -m mibici.modeling.registry` | Elige y registra el champion y el challenger de cada pregunta |
 | `python -m pytest -q tests` | Ejecuta las pruebas automatizadas |
-| `python -m mibici.quality --pregunta all --max-filas 5000` | Genera reportes DeepChecks de integridad y drift |
+| `python -m mibici.quality --pregunta all` | Valida con DeepChecks P1, P2, P3 y el dataset base; `--pregunta` acepta `p1`, `p2`, `p3`, `base` o `all` |
 | `bandit -c .bandit -r mibici/ tests/` | Ejecuta el análisis estático de seguridad (SAST) |
 | `pip-audit -r requirements.txt --no-deps --disable-pip` | Audita las versiones fijadas en `requirements.txt` (SCA); lista también el riesgo aceptado |
 | `make security` | Ejecuta Bandit y pip-audit con el riesgo aceptado declarado en el `Makefile`; termina en éxito si no hay hallazgos nuevos |
 | `ruff check` y `ruff format --check` | Revisan el estilo del código |
 
-## Testing y calidad de datos
+## Pruebas y calidad de datos
+
+### Pruebas automatizadas
 
 Todas las pruebas están en `tests/` y se ejecutan con un solo comando:
 
@@ -83,49 +98,47 @@ Todas las pruebas están en `tests/` y se ejecutan con un solo comando:
 python -m pytest -q tests
 ```
 
-La suite cubre ingesta, *feature engineering*, baselines, candidatos, clustering,
-MLflow Project y Model Registry. Incluye casos normales y límite, como horizontes
-inválidos, viajes en el límite temporal, estaciones sin actividad, duplicados, nulos y
-drift. `test_baseline_p3_es_reproducible` entrena dos veces con la misma semilla y exige
-las mismas etiquetas y métricas; `test_muestreo_es_reproducible_y_valida_el_limite`
-comprueba que la muestra de calidad también sea determinista.
+La suite tiene 220 pruebas y tarda alrededor de un minuto. No lee `data/`, no usa la red y no necesita un servidor de MLflow: `tests/conftest.py` genera viajes y estaciones sintéticos con semilla fija, da a cada prueba que registra en MLflow una base SQLite y una carpeta de artefactos dentro de `tmp_path`, y hace fallar cualquier conexión de red o resolución de nombres durante una prueba.
 
-### Validación con DeepChecks
+| Archivo | Qué comprueba |
+| --- | --- |
+| `test_reproducibilidad.py` | Entrena dos veces cada candidato con `ejecutar_p1`, `ejecutar_p2` y `ejecutar_p3` y exige las mismas predicciones, probabilidades y métricas (HistGradientBoosting y Ridge en P1; HistGradientBoosting y regresión logística en P2; K-Means, MiniBatch K-Means y Ward en P3). Comprueba que la semilla viene de `SEMILLA` en `mibici/config.py`, que con otra semilla HistGradientBoosting cambia y que el modelo registrado en MLflow se carga y predice igual |
+| `test_ingesta.py` | Corre la ingesta completa con CSV sintéticos: nombres a snake_case ASCII, eliminación de datos personales, duplicados exactos con las ocho columnas, estaciones fuera de la nomenclatura, tipos y errores esperados, archivos sin filas, viajes en el borde de la ventana, hashes, `version_datos`, manifiesto y descarga sin red |
+| `test_calidad.py` | Verificaciones de P3 y del dataset base con datos limpios y con duplicados, nulos y estaciones fuera de la nomenclatura; que ningún valor personal llega a DeepChecks ni al resumen; validación de P1 y opciones del CLI |
+| `test_deepchecks.py` | Muestreo determinista y detección de duplicados, nulos y drift con chequeos de DeepChecks |
+| `test_features.py` | Tablones de P1, P2 y P3, rezagos, filtro de viajes espurios sin fuga, rejilla estación-hora, partición temporal, purga y carga de los Parquet |
+| `test_baselines.py` | Reglas base, métricas y sus casos límite, y reproducibilidad del baseline de P3 |
+| `test_candidates.py` | Configuración de la búsqueda, construcción de modelos, registro de parámetros, configuración y muestra de entrenamiento en MLflow, y validación del CLI |
+| `test_registry.py` | Selección, registro idempotente, aliases `champion` y `challenger`, linaje y carga de los modelos registrados |
+| `test_train.py` | Commit y autor de Git con sus casos de error, etiquetas, parámetros comunes y baselines registrados en MLflow |
+| `test_artifacts.py`, `test_clustering.py`, `test_config.py` y `test_mlproject.py` | Gráficas, Ward con asignación por centroide, constantes de configuración y valores por defecto de `MLproject` |
 
-Primero deben existir `data/processed/viajes.parquet` y
-`data/processed/estaciones.parquet`. Después se validan P1 y P2 con muestras de hasta
-5,000 filas por partición:
+### Validación de datos con DeepChecks
+
+Primero deben existir los CSV de `data/raw/` y los Parquet de `data/processed/`, que deja `python -m mibici.dataset`. Después:
 
 ```bash
-python -m mibici.quality --pregunta all --max-filas 5000
+python -m mibici.quality --pregunta all
 ```
 
-El comando ejecuta las suites `data_integrity` y `train_test_validation` sobre la
-partición temporal, y genera HTML y un resumen JSON en `reports/deepchecks/p1/` y
-`reports/deepchecks/p2/`. Los reportes locales revisan esquema, tipos, valores faltantes,
-duplicados, distribución y drift entre entrenamiento y prueba. La muestra usa
-`SEMILLA=42`, por lo que dos ejecuciones sobre la misma versión de datos seleccionan las
-mismas filas. Los reportes se excluyen de Git porque pueden contener ejemplos derivados
-de los datos; en el repositorio sólo se conserva la captura sin registros individuales.
+| Opción | Qué valida | Reportes |
+| --- | --- | --- |
+| `--pregunta p1` y `--pregunta p2` | Tablones de entrenamiento y prueba de la partición temporal, con las suites `data_integrity` y `train_test_validation` | `reports/deepchecks/p1/` y `reports/deepchecks/p2/` |
+| `--pregunta p3` | Perfiles de estaciones que agrupan los modelos de P3, con `data_integrity` más `Percent Of Nulls`, y conteos de perfiles repetidos, nulos, proporciones fuera de rango y estaciones fuera de la nomenclatura | `reports/deepchecks/p3/` |
+| `--pregunta base` | Viajes y nomenclatura de `data/raw/` y de `data/processed/`, con `data_integrity` más `Percent Of Nulls`, y conteos sobre todas las filas de duplicados exactos, nulos, valores que no se pueden tipar y viajes con estaciones fuera de la nomenclatura | `reports/deepchecks/base/` |
+| `--pregunta all` | Las cuatro anteriores; `make quality` ejecuta lo mismo | Las cuatro carpetas |
 
-El drift no se oculta ni se considera automáticamente un error: al dividir por tiempo es
-posible que agosto/septiembre difieran de meses anteriores. Se documenta como señal para
-investigar y monitorear antes de promover un modelo.
+Cada carpeta recibe un HTML por suite y un `resumen.json` con los chequeos aprobados, no aprobados y no ejecutados y los conteos. `--max-filas` (5,000 por omisión) limita las filas que recibe DeepChecks por partición de P1 y P2 y por tabla de viajes; la muestra usa `SEMILLA=42`, así que dos ejecuciones sobre la misma versión de datos evalúan las mismas filas. Los perfiles de P3 y las estaciones se evalúan completos. `--salida` cambia el directorio de los reportes.
 
-Los resultados obtenidos, su interpretación y las decisiones de tratamiento están en
-[`references/calidad_datos.md`](references/calidad_datos.md).
+En la última corrida, los crudos tienen 758 duplicados exactos y 3,954 viajes con las estaciones 405 y 407, que no están en la nomenclatura; los procesados no tienen ninguno de los dos. Los crudos sólo tienen nulos en las columnas personales, que la ingesta elimina. Antes de construir el `Dataset` de DeepChecks se quitan `usuario_id`, `genero` y `anio_de_nacimiento`, y el resumen JSON sólo contiene conteos y nombres de chequeos y columnas, nunca valores ni registros. Los reportes quedan en `reports/deepchecks/`, que está en `.gitignore`, porque los HTML pueden mostrar filas de las muestras.
 
-### Evidencia que se conserva en el README
+El drift no se oculta ni se considera automáticamente un error: al dividir por tiempo es posible que agosto y septiembre difieran de meses anteriores. Se documenta como señal para investigar y monitorear antes de promover un modelo.
 
-Antes de entregar, el equipo agrega capturas legibles en `reports/figures/` con estos
-nombres y sustituye los marcadores siguientes:
+Los resultados de P1, P2, P3 y del dataset base, su interpretación y las decisiones de tratamiento están en [`references/calidad_datos.md`](references/calidad_datos.md).
 
-- `evidencia_pytest.png`: terminal con todas las pruebas aprobadas.
-- `evidencia_deepchecks.png`: resumen de integridad y drift.
-- `evidencia_seguridad.png`: terminal con la ejecución exitosa de Bandit y pip-audit.
+## Integración continua
 
-> **PENDIENTE ANTES DE ENTREGAR:** insertar aquí las capturas, después de ejecutar
-> los comandos desde el commit final de `main`.
+Cada pull request hacia `main` y cada push a `main` ejecutan [`.github/workflows/ci.yml`](.github/workflows/ci.yml) en una máquina nueva de Ubuntu con Python 3.10.20: instala `requirements.txt` y corre `ruff check`, `ruff format --check`, `python -m pytest -q tests` y `make security`. Las pruebas y los chequeos de seguridad solo protegen el proyecto si se ejecutan en cada cambio, así que un cambio que rompe una prueba o agrega una vulnerabilidad que no está en la lista de riesgos aceptados se detecta en el pull request, antes de fusionarse. Como esa máquina no tiene datos, secretos ni servidor de MLflow, cada corrida comprueba además que las pruebas se reproducen desde un clon limpio. Solo usa la red para instalar las dependencias y para que pip-audit consulte las vulnerabilidades conocidas.
 
 ## Seguridad y gestión de riesgos
 
@@ -149,7 +162,7 @@ bandit -c .bandit -r mibici/ tests/
 
 `.bandit` no omite reglas de forma global. `B101` (`assert_used`) se omite solo en `tests/test_*.py`, donde pytest usa `assert`; en `mibici/` no hay asserts. Las dos llamadas a `git` de `mibici/modeling/train.py` (para registrar el autor y el commit de cada corrida) llevan `# nosec` con el código exacto de la regla (`B404` en el import de `subprocess`, `B603` y `B607` en cada llamada), porque usan una lista fija de argumentos, sin shell y sin datos de usuario.
 
-Última corrida: 2,446 líneas escaneadas (2,094 en `mibici/` y 352 en `tests/`), 0 hallazgos de severidad alta, media o baja, 5 hallazgos omitidos por `# nosec` con código y ningún aviso de `nosec` en consola.
+Última corrida: 4,455 líneas escaneadas (2,476 en `mibici/` y 1,979 en `tests/`), 0 hallazgos de severidad alta, media o baja, 5 hallazgos omitidos por `# nosec` con código y ningún aviso de `nosec` en consola.
 
 ### 3. Auditoría de dependencias con pip-audit
 
@@ -272,7 +285,8 @@ La justificación de cada modelo y de cada métrica según la decisión que apoy
 ## Estructura
 
 ```
-├── Makefile                 comandos del proyecto (make data)
+├── .github/workflows/ci.yml integración continua: ruff, pytest y make security
+├── Makefile                 comandos del proyecto (make data, make test, make quality, make security)
 ├── requirements.txt         dependencias con versión fija
 ├── pyproject.toml
 ├── data/                    no se versiona
@@ -283,15 +297,15 @@ La justificación de cada modelo y de cada métrica según la decisión que apoy
 ├── notebooks/               solo exploración: 1.0-dcc-exploracion-inicial.ipynb
 ├── references/              manifiesto de datos, ML Canvas, definición de datos,
 │                            modelos, métricas, arquitectura, calidad de datos y seguridad
-├── reports/figures/         figuras generadas
+├── reports/figures/         figuras generadas y capturas de evidencia
 ├── MLproject                puntos de entrada de mlflow run
 ├── python_env.yaml          entorno de mlflow run
-├── tests/                   pruebas de configuración, variables, modelos y registro
+├── tests/                   pruebas con datos sintéticos, sin red ni servidor de MLflow
 └── mibici/
     ├── config.py            rutas, URLs, fechas, partición, umbrales, semilla y MLflow
     ├── dataset.py           ingesta reproducible
     ├── features.py          ingeniería de variables
-    ├── quality.py           validación de integridad y drift con DeepChecks
+    ├── quality.py           validación de P1, P2, P3 y el dataset base con DeepChecks
     ├── modeling/
     │   ├── artifacts.py     gráficas y tablas registradas en MLflow
     │   ├── baselines.py     reglas base y métricas de P1, P2 y P3
@@ -316,7 +330,8 @@ La justificación de cada modelo y de cada métrica según la decisión que apoy
 | Estructura y código | Configuración en un solo lugar | Para el flujo de ingesta, construcción de variables y experimento, `mibici/config.py` concentra su propia ruta (que los candidatos registran como artefacto), las carpetas de datos, las rutas de los Parquet procesados, las URLs, las fechas, el corte de partición y el de validación, el retraso entre el cierre de cada ventana y la emisión de su predicción, que es también la duración mínima de un viaje válido, el umbral, el horizonte y el umbral de decisión de P2, los hiperparámetros por defecto de los modelos, el criterio de estación activa de P3, la semilla, el nombre del experimento, la URI de tracking, los nombres de los modelos registrados y la métrica de selección de cada pregunta. Los periodos que se registran en MLflow se derivan de esas constantes. El nombre local de cada CSV crudo se arma en `mibici/dataset.py` con la clave del mes. `mibici/modeling/predict.py` y `mibici/plots.py` son plantillas de Cookiecutter sin usar y conservan sus rutas de ejemplo. |
 | Estructura y código | Dependencias con versión fija y entorno reproducible | `requirements.txt` fija con `==` cada paquete; la instalación con Python 3.10 está en [Instalación](#instalación). |
 | Datos y Git | Ningún dato, modelo, carpeta de MLflow ni credencial en el historial | `.gitignore` excluye `/data/`, `*.parquet`, `datos_abiertos_*.csv`, `mlruns/`, `mlartifacts/`, `mlflow.db`, `models/*`, `*.pkl`, `*.joblib`, `*.skops` y `.env`. Los datos se versionan con su hash en `references/manifiesto_datos.json`, no con los archivos. |
-| Testing | Pruebas repetibles con casos normales y límite | `tests/` se ejecuta con PyTest; incluye reproducibilidad del entrenamiento con semilla fija y validaciones sintéticas que demuestran que DeepChecks detecta nulos, duplicados y drift. |
+| Testing | Pruebas repetibles con casos normales y límite | `tests/` se ejecuta con PyTest sobre datos sintéticos, con una base de MLflow temporal y sin red. Incluye la reproducibilidad de los candidatos de P1, P2 y P3 y del baseline de P3 con semilla fija, la ingesta completa con CSV sintéticos y validaciones sintéticas que demuestran que los chequeos de calidad detectan nulos, duplicados, drift y estaciones fuera de la nomenclatura. |
+| Testing | Cada cambio hacia `main` se verifica automáticamente | `.github/workflows/ci.yml` ejecuta `ruff check`, `ruff format --check`, `python -m pytest -q tests` y `make security` en cada push a `main` y en cada pull request hacia `main`. |
 | Datos y Git | Todo cambio entra a `main` por Pull Request revisado | La rama `main` está protegida con un ruleset que exige un Pull Request con al menos una aprobación e impide el push directo y el borrado. Ver [Flujo de trabajo con Git](#flujo-de-trabajo-con-git). |
 
 ## Flujo de trabajo con Git
@@ -339,3 +354,22 @@ Seguimos [GitHub Flow](https://docs.github.com/en/get-started/using-github/githu
 
 - **Lo que nunca entra al repositorio:** datos de MiBici, carpetas de MLflow (`mlruns/`, `mlartifacts/`), modelos serializados ni credenciales (`.env`).
 
+## Evidencia
+
+Las capturas se toman desde el commit final de `main`, con el entorno activado en la raíz del repositorio.
+
+![Pruebas con pytest](reports/figures/evidencia_pytest.png)
+
+Las 220 pruebas aprobadas, obtenidas con `python -m pytest -q tests`.
+
+![Validación de datos con DeepChecks](reports/figures/evidencia_deepchecks.png)
+
+El resumen del dataset base que imprime `python -m mibici.quality --pregunta all`: 758 duplicados exactos y 3,954 viajes con estaciones fuera de la nomenclatura en los datos crudos, que la ingesta elimina. Los resultados de los datos procesados (0 y 0) y de las suites de DeepChecks están en `references/calidad_datos.md`.
+
+![Análisis de seguridad](reports/figures/evidencia_seguridad.png)
+
+Bandit sin hallazgos y pip-audit sin vulnerabilidades fuera de las 59 aceptadas, obtenidos con `make security`.
+
+![Integración continua en GitHub Actions](reports/figures/evidencia_ci.png)
+
+Una corrida exitosa del workflow `CI` de `.github/workflows/ci.yml` en GitHub Actions, con los pasos de ruff, pytest y `make security` aprobados.
