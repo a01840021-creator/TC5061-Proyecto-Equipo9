@@ -3,7 +3,9 @@
 import os
 
 import mlflow
-import mlflow.sklearn
+import numpy as np
+import pandas as pd
+from mlflow.pyfunc import load_model
 from mlflow.tracking import MlflowClient
 
 from mibici.config import (
@@ -42,6 +44,11 @@ class ModelService:
             "status": "not_loaded",
         }
 
+    @property
+    def ready(self) -> bool:
+        """Indica si existe un modelo cargado y listo para inferencia."""
+        return self.model is not None and self.metadata["status"] == "loaded"
+
     def load(self):
         """Carga el modelo registrado y obtiene sus metadatos.
 
@@ -58,7 +65,7 @@ class ModelService:
                     "MODEL_URI debe utilizar el formato models:/..."
                 )
 
-            referencia = self.model_uri[len("models:/"):]
+            referencia = self.model_uri[len("models:/") :]
             nombre, separador, alias = referencia.partition("@")
 
             if not separador or not nombre or not alias:
@@ -74,7 +81,7 @@ class ModelService:
                 alias=alias,
             )
 
-            modelo = mlflow.sklearn.load_model(self.model_uri)
+            modelo = load_model(self.model_uri)
 
             self.model = modelo
             self.metadata = {
@@ -88,7 +95,14 @@ class ModelService:
             return self.model
 
         except Exception as exc:
+            self.metadata["status"] = "error"
             raise RuntimeError(
                 f"No fue posible cargar el modelo desde MLflow "
                 f"({self.model_uri}): {exc}"
             ) from exc
+
+    def predict(self, frame: pd.DataFrame) -> np.ndarray:
+        """Ejecuta inferencia con el modelo cargado y normaliza la salida numérica."""
+        if not self.ready:
+            raise RuntimeError("El modelo no está disponible para realizar inferencias.")
+        return np.asarray(self.model.predict(frame), dtype="float64")

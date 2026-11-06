@@ -2,9 +2,8 @@
 
 from types import SimpleNamespace
 
-import pytest
-
 from app.model_service import ModelService
+import pytest
 
 
 def test_carga_modelo_y_obtiene_metadatos(monkeypatch):
@@ -37,7 +36,7 @@ def test_carga_modelo_y_obtiene_metadatos(monkeypatch):
         ClienteFalso,
     )
     monkeypatch.setattr(
-        "app.model_service.mlflow.sklearn.load_model",
+        "app.model_service.load_model",
         cargar_modelo,
     )
     monkeypatch.setattr(
@@ -86,7 +85,7 @@ def test_no_carga_dos_veces_el_mismo_modelo(monkeypatch):
         ClienteFalso,
     )
     monkeypatch.setattr(
-        "app.model_service.mlflow.sklearn.load_model",
+        "app.model_service.load_model",
         cargar_modelo,
     )
     monkeypatch.setattr(
@@ -131,7 +130,7 @@ def test_maneja_error_si_mlflow_no_encuentra_el_modelo(monkeypatch):
             pass
 
         def get_model_version_by_alias(self, name, alias):
-            raise Exception("Modelo no encontrado")
+            raise RuntimeError("Modelo no encontrado")
 
     monkeypatch.setattr(
         "app.model_service.MlflowClient",
@@ -149,3 +148,30 @@ def test_maneja_error_si_mlflow_no_encuentra_el_modelo(monkeypatch):
 
     with pytest.raises(RuntimeError, match="No fue posible cargar el modelo"):
         servicio.load()
+
+    assert servicio.metadata["status"] == "error"
+
+
+def test_lee_configuracion_desde_variables_de_entorno(monkeypatch):
+    """Comprueba la configuración que recibirá el servicio dentro del contenedor."""
+    monkeypatch.setenv("MLFLOW_TRACKING_URI", "http://host.containers.internal:5001")
+    monkeypatch.setenv(
+        "MODEL_URI",
+        "models:/mibici-equipo09-p1-demanda@champion",
+    )
+
+    servicio = ModelService()
+
+    assert servicio.tracking_uri == "http://host.containers.internal:5001"
+    assert servicio.model_uri == "models:/mibici-equipo09-p1-demanda@champion"
+
+
+def test_predict_requiere_modelo_cargado():
+    """Evita ejecutar inferencia cuando el servicio todavía no está listo."""
+    servicio = ModelService(
+        tracking_uri="http://localhost:5001",
+        model_uri="models:/modelo-prueba@champion",
+    )
+
+    with pytest.raises(RuntimeError, match="no está disponible"):
+        servicio.predict(None)
