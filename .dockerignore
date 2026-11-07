@@ -1,0 +1,8 @@
+# La imagen sólo necesita el código de la API, el paquete mibici y sus dependencias.
+# Todo lo demás (datos, .env, .venv, mlflow.db, mlartifacts/, .git) queda fuera del contexto.
+*
+!app/
+!mibici/
+!requirements-serving.txt
+**/__pycache__
+**/*.pyc
