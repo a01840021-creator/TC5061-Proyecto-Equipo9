@@ -138,6 +138,18 @@ docker-run:
 	docker run -d --name mibici-api -p 8000:8000 mibici-api
 
 
+## Run smoke tests against the running container or local API
+.PHONY: smoke-test
+smoke-test:
+	./scripts/smoke_test.sh
+
+
+## Run smoke tests with an automatic container lifecycle
+.PHONY: smoke-test-container
+smoke-test-container:
+	./scripts/smoke_test.sh -c
+
+
 #################################################################################
 # Self Documenting Commands                                                     #
 #################################################################################

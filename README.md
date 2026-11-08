@@ -42,7 +42,7 @@ Proyecto integrador del equipo 9. Propone y construye una solución de Machine L
 | Carrera Rojas, Mariana Judith | A01840021 | Servicio de carga del modelo desde el Model Registry por nombre y alias (`app/model_service.py`), configuración por variables de entorno, endpoints `/health` y `/model-info` y sus pruebas. | PR #23. |
 | Barranco Cruz, Luis Fernando | A01797868 | Endpoint `POST /predict/p1` con esquemas de Pydantic para la entrada y la salida, endpoints `/health/live` y `/health/ready` y pruebas de validación con casos límite. | PR #24 y revisión aprobatoria del PR #23. |
 | Barrera Mendoza, José Manuel | A01797854 | Imagen de Docker con usuario sin privilegios y `HEALTHCHECK`, dependencias fijadas de la imagen, exportación del champion de P1 desde el Model Registry a `models/p1/`, carga del modelo empaquetado en la API, pruebas, Bandit y pip-audit sobre el servicio y documentación. | PR #25 y revisión aprobatoria del PR #24. |
-| Carrera Castillo, David | A01840136 | Prueba de humo del contenedor y captura de evidencia. | PR #26. |
+| Carrera Castillo, David | A01840136 | Pruebas integrales y de humo (`scripts/smoke_test.sh`), automatización en Makefile (`make smoke-test`), reporte de evidencias y documentación técnica del servicio en contenedor (`docs/evidencias/`). | PR #26 y revisión aprobatoria del PR #25. |
 
 ## Preguntas del proyecto
 
@@ -93,6 +93,7 @@ Las corridas que se reportan se lanzan con `mlflow run` (ver [MLflow Project](#m
 | `make modelo-servicio` | Exporta el champion de P1 del Model Registry a `models/p1/`, la carpeta que empaqueta la imagen del servicio |
 | `uvicorn app.main:app --port 8000` | Levanta la API de predicción en local con el modelo de `models/p1/` |
 | `make docker-build` y `make docker-run` | Construyen la imagen del servicio y levantan el contenedor en el puerto 8000 |
+| `make smoke-test` o `./scripts/smoke_test.sh` | Ejecuta la suite de pruebas de humo y validación de la API en el contenedor |
 | `python -m pytest -q tests` | Ejecuta las pruebas automatizadas |
 | `python -m mibici.quality --pregunta all` | Valida con DeepChecks P1, P2, P3 y el dataset base; `--pregunta` acepta `p1`, `p2`, `p3`, `base` o `all` |
 | `bandit -c .bandit -r app/ mibici/ tests/` | Ejecuta el análisis estático de seguridad (SAST) |
@@ -376,22 +377,40 @@ El servicio hace inferencia en tiempo real: calcula la predicción cuando llega 
 
 La alternativa por lotes sería calcular cada noche las 484 estaciones por 24 horas del día siguiente y guardar la tabla. Conviene si la consulta se vuelve masiva o si los rezagos solo existen en el almacén de datos, y se puede hacer con el mismo modelo empaquetado.
 
+### 6. Pruebas integrales y automatización (Smoke Tests)
+
+El script `scripts/smoke_test.sh` (ejecutable también con `make smoke-test`) automatiza la verificación integral de la API en el contenedor:
+- Comprueba las sondas de vivacidad y disponibilidad (`/health/live`, `/health/ready` y `/health`).
+- Verifica la recuperación de metadatos del champion (`/model-info`).
+- Ejecuta inferencias válidas (`POST /predict/p1`), validando que la predicción y el tiempo de respuesta sean coherentes.
+- Prueba las validaciones de Pydantic forzando errores 422 ante horas inválidas (`hora = 24`), inconsistencias entre día y fin de semana, o campos requeridos faltantes.
+- Soporta un ciclo completo automatizado que construye, levanta un contenedor temporal, ejecuta las 10 pruebas y limpia los recursos al finalizar:
+  ```bash
+  make smoke-test-container
+  # o bien directamente: ./scripts/smoke_test.sh -c
+  ```
+
+El reporte detallado con la salida de cada comando y las capturas está en [`docs/evidencias/evidencia_servicio_contenedor.md`](docs/evidencias/evidencia_servicio_contenedor.md).
+
 ## Estructura
 
 ```
 ├── .github/workflows/ci.yml integración continua: ruff, pytest y make security
 ├── Makefile                 comandos del proyecto (make data, make test, make quality, make security,
-│                            make modelo-servicio, make docker-build)
+│                            make modelo-servicio, make docker-build, make smoke-test)
 ├── requirements.txt         dependencias con versión fija
 ├── requirements-serving.txt dependencias de la imagen del servicio
 ├── Dockerfile               imagen del servicio de predicción
 ├── .dockerignore            lista blanca del contexto de la imagen
 ├── app/                     API de FastAPI: endpoints, esquemas de Pydantic y carga del modelo
+├── scripts/
+│   └── smoke_test.sh        suite de pruebas de humo y validación de endpoints
 ├── pyproject.toml
 ├── data/                    no se versiona
 │   ├── raw/                 CSV originales descargados
 │   └── processed/           viajes.parquet y estaciones.parquet
-├── docs/                    carpeta de la plantilla, sin contenido por ahora
+├── docs/
+│   └── evidencias/          reporte y capturas de evidencia del contenedor de predicción
 ├── models/                  modelos entrenados; solo se versiona p1/
 │   └── p1/                  champion de P1 exportado del Model Registry para la imagen
 ├── notebooks/               solo exploración: 1.0-dcc-exploracion-inicial.ipynb
@@ -475,3 +494,13 @@ Bandit sin hallazgos y pip-audit sin vulnerabilidades fuera de las 59 aceptadas,
 ![Integración continua en GitHub Actions](reports/figures/evidencia_ci.png)
 
 Una corrida exitosa del workflow `CI` de `.github/workflows/ci.yml` en GitHub Actions, con los pasos de ruff, pytest y `make security` aprobados.
+
+### Entrega 4: API REST en contenedor
+
+![Petición de predicción a la API en contenedor](reports/figures/evidencia_1_servicio_curl.png)
+
+Ejecución del contenedor en Docker (`docker ps`), verificación del estado `(healthy)`, consultas `curl` a los endpoints `/health/ready`, `/model-info` y predicción de demanda con el champion de P1 (`POST /predict/p1`) con respuesta JSON y latencia.
+
+![Pruebas de humo y validaciones Pydantic](reports/figures/evidencia_2_smoke_tests.png)
+
+Validación de esquemas con Pydantic (rechazo con 422 ante horas inválidas, inconsistencias de calendario o campos requeridos omitidos) y ejecución completa de la suite de pruebas de humo automatizadas (`scripts/smoke_test.sh`) con 10/10 pruebas aprobadas (100%). El reporte técnico reproducible se encuentra en [`docs/evidencias/evidencia_servicio_contenedor.md`](docs/evidencias/evidencia_servicio_contenedor.md).
