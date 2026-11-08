@@ -212,6 +212,9 @@ models/*
 *.pkl
 *.joblib
 *.skops
+# Excepción: el champion de P1 que empaqueta la imagen del servicio (make modelo-servicio)
+!models/p1/
+!models/p1/**
 
 # Datos de MiBici fuera de data/
 *.parquet

@@ -144,3 +144,9 @@ METRICAS_SELECCION = {
 }
 ALIAS_CHAMPION = "champion"
 ALIAS_CHALLENGER = "challenger"
+
+# Carpeta del champion de P1 exportado del Model Registry con `make modelo-servicio`. La imagen
+# de Docker la empaqueta y la API la carga por omisión (MODEL_URI en app/model_service.py).
+MODELO_SERVICIO_DIR = MODELS_DIR / "p1"
+# Archivo de la carpeta exportada con el nombre, el alias y la versión del modelo
+METADATOS_SERVICIO = "metadata.json"

@@ -1,9 +1,9 @@
-# Imagen del servicio de predicción de MiBici: API de FastAPI que sirve el modelo champion
-# de P1 recuperado del Model Registry de MLflow.
+# Imagen del servicio de predicción de MiBici: API de FastAPI que sirve el champion de P1.
+# El modelo viene empaquetado en models/p1/, exportado del Model Registry con
+# `make modelo-servicio`, así que el contenedor no necesita un servidor de MLflow.
 #
 # Construir:  docker build -t mibici-api .
-# Ejecutar:   ver el README (servidor de MLflow, variables de entorno y montaje
-#             de mlartifacts/).
+# Ejecutar:   docker run -d --name mibici-api -p 8000:8000 mibici-api
 
 FROM python:3.10.20-slim
 
@@ -25,12 +25,17 @@ RUN pip install --no-cache-dir -r requirements-serving.txt
 # Usuario sin privilegios. El código queda como propiedad de root, de sólo lectura para él.
 RUN useradd --create-home --uid 10001 api
 
+# El modelo cambia menos que el código, así que va en una capa anterior.
+COPY models/p1/ models/p1/
 COPY mibici/ mibici/
 COPY app/ app/
+# Lectura para todos sin importar los permisos del clon que construye la imagen; root sigue
+# siendo el dueño, así que el usuario api puede leer pero no modificar.
+RUN chmod -R a+rX models mibici app
 
-# Valores por defecto; se sobrescriben con -e al ejecutar el contenedor.
-ENV MLFLOW_TRACKING_URI=http://host.docker.internal:5000 \
-    MODEL_URI=models:/mibici-equipo09-p1-demanda@champion
+# La API carga la carpeta empaquetada. Con -e MODEL_URI=models:/<nombre>@<alias> y
+# -e MLFLOW_TRACKING_URI=... cargaría el modelo del Model Registry (ver el README).
+ENV MODEL_URI=/srv/models/p1
 
 USER api
 

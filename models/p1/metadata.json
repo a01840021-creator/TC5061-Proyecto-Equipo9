@@ -1,0 +1,8 @@
+{
+  "model_name": "mibici-equipo09-p1-demanda",
+  "alias": "champion",
+  "version": "1",
+  "model_uri": "models:/mibici-equipo09-p1-demanda@champion",
+  "run_id": "ed97390337ce4d2f8d95d0a58cc02b8f",
+  "exportado_en": "2026-11-08T00:55:59+00:00"
+}

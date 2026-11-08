@@ -1,6 +1,6 @@
-# Dependencias de la imagen del servicio de predicción (Dockerfile).
-# mlflow 3.17.1 es la versión con la que se registró el modelo champion de P1; el resto
-# coincide con requirements.txt. Lista completa y fijada para que la imagen sea reproducible.
+# Dependencias de la imagen del servicio de predicción (Dockerfile): lo que necesitan la API
+# y el modelo empaquetado en models/p1/, con las mismas versiones de requirements.txt.
+# Lista completa y fijada para que la imagen sea reproducible.
 
 aiohappyeyeballs==2.7.1
 aiohttp==3.14.5
@@ -49,9 +49,9 @@ loguru==0.7.3
 mako==1.4.3
 markupsafe==3.0.4
 matplotlib==3.10.9
-mlflow==3.17.1
-mlflow-skinny==3.17.1
-mlflow-tracing==3.17.1
+mlflow==3.17.2
+mlflow-skinny==3.17.2
+mlflow-tracing==3.17.2
 multidict==7.1.0
 numpy==2.2.6
 opentelemetry-api==1.45.1
