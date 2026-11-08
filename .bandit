@@ -1,9 +1,9 @@
 # Configuración de Bandit para MiBici. Se ejecuta desde la raíz del repositorio:
-#   bandit -c .bandit -r mibici/ tests/
+#   bandit -c .bandit -r app/ mibici/ tests/
 #
 # No hay reglas omitidas de forma global. Las excepciones son puntuales:
 # - B101 (assert_used) solo se omite en los archivos de prueba de tests/, donde assert es
-#   la forma en que pytest verifica resultados. En mibici/ no hay asserts y la regla aplica.
+#   la forma en que pytest verifica resultados. En app/ y mibici/ no hay asserts y la regla aplica.
 # - B404, B603 y B607 se omiten línea por línea con "# nosec" en mibici/modeling/train.py,
 #   donde subprocess ejecuta git con una lista fija de argumentos, sin shell y sin datos de
 #   usuario, para leer git rev-parse HEAD y git config user.name.

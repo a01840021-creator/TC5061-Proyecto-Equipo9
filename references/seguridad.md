@@ -2,30 +2,31 @@
 
 **Proyecto:** MiBici: demanda, riesgo de rebalanceo y patrones de uso  
 **Responsable:** David Carrera Castillo (A01840136)  
-**Fecha de la última corrida:** 1 de noviembre de 2026  
+**Fecha de la última corrida:** 7 de noviembre de 2026  
 **Entorno de ejecución:** Python 3.10.20, entorno creado desde `requirements.txt`, macOS
 
 ## 1. Alcance
 
 Este documento describe qué controles de seguridad tiene el repositorio, cómo se ejecutan y qué resultados dieron en la última corrida. Cubre tres frentes:
 
-1. Configuración y datos: qué variables de entorno lee el código, qué excluye `.gitignore` y cómo la ingesta elimina los datos personales de la fuente.
-2. Análisis estático del código con Bandit 1.9.4 sobre `mibici/` y `tests/`.
-3. Auditoría de dependencias con pip-audit 2.10.1 sobre `requirements.txt`, con las remediaciones aplicadas y el riesgo que se acepta de forma explícita.
+1. Configuración y datos: qué variables de entorno lee el código, qué excluye `.gitignore`, cómo la ingesta elimina los datos personales de la fuente y qué entra a la imagen de Docker del servicio de predicción.
+2. Análisis estático del código con Bandit 1.9.4 sobre `app/`, `mibici/` y `tests/`.
+3. Auditoría de dependencias con pip-audit 2.10.1 sobre `requirements.txt` y `requirements-serving.txt`, con las remediaciones aplicadas y el riesgo que se acepta de forma explícita.
 
 ## 2. Configuración, secretos y datos personales
 
 ### 2.1. Variables de entorno
 
-El código lee tres variables con `os.getenv`, y son las únicas que aparecen en [`.env.example`](../.env.example). `mibici/config.py` carga un archivo `.env` local con `python-dotenv`; si una variable no existe, se usa el valor por omisión que también aparece en la plantilla.
+El código lee cuatro variables con `os.getenv`, y son las únicas que aparecen en [`.env.example`](../.env.example). `mibici/config.py` carga un archivo `.env` local con `python-dotenv`; si una variable no existe, se usa el valor por omisión que también aparece en la plantilla.
 
 | Variable | Valor por omisión | Dónde se lee | Para qué sirve |
 | :--- | :--- | :--- | :--- |
-| `MLFLOW_TRACKING_URI` | `http://127.0.0.1:5000` | `mibici/config.py`, `mibici/modeling/candidates.py`, `mibici/modeling/registry.py` | Dirección del servidor de MLflow Tracking |
+| `MLFLOW_TRACKING_URI` | `http://127.0.0.1:5000` | `mibici/config.py`, `mibici/modeling/candidates.py`, `mibici/modeling/registry.py`, `mibici/modeling/serving.py`, `app/model_service.py` | Dirección del servidor de MLflow Tracking |
+| `MODEL_URI` | `models/p1` | `app/model_service.py` | Modelo que carga la API: la carpeta exportada del Model Registry o una URI `models:/<nombre>@<alias>` |
 | `LOGURU_LEVEL` | `INFO` | `mibici/config.py` | Nivel mínimo de los mensajes de loguru |
 | `LOGURU_COLORIZE` | `True` | `mibici/config.py` | Color en los mensajes; `0`, `false`, `no` u `off` lo desactivan |
 
-Ninguna de las tres es un secreto. El proyecto no usa claves de API, contraseñas ni tokens. El servidor de MLflow por omisión escucha en la interfaz local (`127.0.0.1`).
+Ninguna de las cuatro es un secreto. El proyecto no usa claves de API, contraseñas ni tokens. El servidor de MLflow por omisión escucha en la interfaz local (`127.0.0.1`).
 
 ### 2.2. Exclusiones en `.gitignore`
 
@@ -35,7 +36,7 @@ Ninguna de las tres es un secreto. El proyecto no usa claves de API, contraseña
 - Certificados y llaves: `*.pem`, `*.key`, `*.crt`, `*.pfx` y `*.p12`.
 - Entornos virtuales: `.venv`, `env/`, `venv/` y `ENV/`.
 - Bases de datos y seguimiento de MLflow: `mlflow.db`, `*.db`, `db.sqlite3`, `mlruns/` y `mlartifacts/`.
-- Modelos serializados: `models/*` (con la excepción `!models/.gitkeep`), `*.pkl`, `*.joblib` y `*.skops`.
+- Modelos serializados: `models/*` (con las excepciones `!models/.gitkeep` y `!models/p1/`), `*.pkl`, `*.joblib` y `*.skops`. `models/p1/` es el champion de P1 que exporta `make modelo-servicio` y empaqueta la imagen del servicio; se entrenó sin datos personales (sección 2.3).
 - Datos: `/data/`, `*.parquet` y `datos_abiertos_*.csv`.
 - Reportes locales: `reports/deepchecks/` y `reports/security/`.
 
@@ -47,13 +48,20 @@ Ninguna de las tres preguntas del proyecto necesita esos datos, así que `mibici
 
 En consecuencia, los datos personales no llegan a los Parquet procesados, a los conjuntos de entrenamiento, a lo que se registra en MLflow ni al repositorio. Los CSV crudos sí los contienen y se quedan en `data/raw/` de cada máquina, carpeta que `.gitignore` excluye junto con el patrón `datos_abiertos_*.csv`.
 
+### 2.4. Imagen de Docker del servicio de predicción
+
+- El contenedor corre con el usuario sin privilegios `api` (UID 10001). El código y el modelo se copian como propiedad de root, así que ese usuario los puede leer pero no modificar.
+- [`.dockerignore`](../.dockerignore) es una lista blanca: el contexto de construcción solo incluye `app/`, `mibici/`, `models/p1/` y `requirements-serving.txt`. `.env`, `.venv`, `data/`, `mlflow.db`, `mlartifacts/` y `.git` no llegan a la imagen.
+- La imagen no lleva credenciales ni necesita red para responder: el modelo va empaquetado y no se consulta un servidor de MLflow.
+- La API valida cada petición con Pydantic antes de llegar al modelo y responde 422 a entradas faltantes, desconocidas, de otro tipo o fuera de rango.
+
 ## 3. Análisis estático con Bandit
 
 ### 3.1. Configuración
 
 El archivo [`.bandit`](../.bandit) no omite ninguna regla de forma global. Solo excluye las carpetas `.venv`, `mlruns` y `mlartifacts`. Las excepciones son puntuales:
 
-- `B101` (`assert_used`) se omite únicamente en los archivos que coinciden con `tests/test_*.py`, mediante la opción `assert_used.skips` de Bandit. En las pruebas, `assert` es la forma en que pytest verifica resultados. En `mibici/` no hay ningún `assert`, así que la regla queda activa para todo el paquete.
+- `B101` (`assert_used`) se omite únicamente en los archivos que coinciden con `tests/test_*.py`, mediante la opción `assert_used.skips` de Bandit. En las pruebas, `assert` es la forma en que pytest verifica resultados. En `app/` y `mibici/` no hay ningún `assert`, así que la regla queda activa en todo el código que no es de pruebas.
 - `B404`, `B603` y `B607` se omiten línea por línea con `# nosec` y el código exacto de la regla en `mibici/modeling/train.py`. Ahí `subprocess` ejecuta `git config user.name` y `git rev-parse HEAD` para registrar el autor y el commit de cada corrida en MLflow. Las dos llamadas usan una lista fija de argumentos, no usan `shell=True` y no reciben datos del usuario.
 
 | Línea en `train.py` | Código | Comentario en la línea |
@@ -64,11 +72,11 @@ El archivo [`.bandit`](../.bandit) no omite ninguna regla de forma global. Solo 
 
 ### 3.2. Resultados de la corrida
 
-Comando: `bandit -c .bandit -r mibici/ tests/`. La salida completa queda en `reports/security/bandit_report.txt`.
+Comando: `bandit -c .bandit -r app/ mibici/ tests/`. La salida completa queda en `reports/security/bandit_report.txt`.
 
 | Métrica | Valor |
 | :--- | :--- |
-| Líneas de código escaneadas | 4,455 (2,476 en `mibici/` y 1,979 en `tests/`) |
+| Líneas de código escaneadas | 5,138 (261 en `app/`, 2,562 en `mibici/` y 2,315 en `tests/`) |
 | Hallazgos de severidad alta | 0 |
 | Hallazgos de severidad media | 0 |
 | Hallazgos de severidad baja | 0 |
@@ -77,7 +85,7 @@ Comando: `bandit -c .bandit -r mibici/ tests/`. La salida completa queda en `rep
 | Archivos omitidos | 0 |
 | Código de salida | 0 |
 
-Como referencia, la misma corrida sin `assert_used.skips` y sin los comentarios `# nosec` (`bandit -r mibici/ tests/ --ignore-nosec`) reporta 350 hallazgos de severidad baja: 345 de `B101`, todos en `tests/`, y los 5 de `subprocess` en `train.py`.
+Como referencia, la misma corrida sin `assert_used.skips` y sin los comentarios `# nosec` (`bandit -r app/ mibici/ tests/ --ignore-nosec`) reporta 399 hallazgos de severidad baja: 394 de `B101`, todos en `tests/`, y los 5 de `subprocess` en `train.py`.
 
 Bandit no escribe en la consola ningún aviso del tipo "nosec encountered, but no failed test". En las dos llamadas a `git`, la salida de `subprocess.check_output` se guarda primero en la variable `salida` y `.strip()` se aplica en una línea aparte. Así, la línea que lleva `# nosec B603, B607` contiene una sola llamada, que es la que Bandit señala.
 
@@ -93,6 +101,12 @@ pip-audit -r requirements.txt --no-deps --disable-pip
 
 `requirements.txt` fija con `==` la versión exacta de cada paquete instalado en el entorno, incluidas las dependencias transitivas de Bandit y pip-audit, así que pip-audit puede leerlo sin resolver dependencias y sin crear un entorno temporal. La línea `-e .` aparece en la salida como omitida ("could not deduce package version from URL requirement") porque corresponde al propio proyecto, no a un paquete publicado; no impide la auditoría del resto.
 
+`requirements-serving.txt`, las dependencias de la imagen del servicio, se audita con el mismo comando y la misma lista de excepciones. Fija con `==` los 94 paquetes que necesitan la API y el modelo, con las mismas versiones de `requirements.txt`:
+
+```bash
+pip-audit -r requirements-serving.txt --no-deps --disable-pip
+```
+
 El modo con resolución de dependencias (`pip-audit -r requirements.txt` sin `--no-deps`) no se pudo usar en macOS con el Python 3.10.20 que instala uv: pip-audit crea un entorno temporal y el paso `ensurepip` de ese entorno termina con `SIGABRT`.
 
 ### 4.2. Remediación de versiones anteriores
@@ -105,7 +119,7 @@ Las versiones anteriores se auditaron con un archivo temporal con `certifi==2026
 | `mlflow` | 3.17.1 | 3.17.2 | CVE-2026-53995 (GHSA-wqmh-qccw-pqwf) | 3.17.2 | Recorrido de rutas en el backend FileStore de tracking mediante un identificador de traza manipulado enviado a `POST /api/3.0/mlflow/traces`, sin autenticación |
 | `pyasn1` | 0.6.4 | 0.6.5 | CVE-2026-119194 (GHSA-fm9c-5rcf-2q5p), CVE-2026-119195 (GHSA-9m75-vc3g-4x39), CVE-2026-119196 (GHSA-2qm8-x737-gmw5), CVE-2026-119197 (GHSA-mm57-4v3p-rchx) | 0.6.5 | Consumo de CPU que crece de forma cuadrática al decodificar estructuras ASN.1 controladas por un atacante, lo que puede agotar el procesador |
 
-`mlflow-skinny` y `mlflow-tracing` 3.17.1 no tienen avisos; se actualizaron a 3.17.2 junto con `mlflow`. Con MLflow 3.17.2 instalado, `ruff check`, `ruff format --check` y las 40 pruebas de `python -m pytest -q tests` pasan.
+`mlflow-skinny` y `mlflow-tracing` 3.17.1 no tienen avisos; se actualizaron a 3.17.2 junto con `mlflow`. El champion de P1 se registró antes de esa actualización, con `mlflow` 3.17.1, y su carpeta exportada lo declara así. La imagen del servicio usa 3.17.2 para no reintroducir CVE-2026-53995; al cargar el modelo, MLflow avisa de la diferencia. Es una diferencia de versión de parche y `tests/test_servicio_empaquetado.py` comprueba que la predicción del modelo empaquetado no cambia. Con MLflow 3.17.2 instalado, `ruff check`, `ruff format --check` y las 40 pruebas de `python -m pytest -q tests` pasan.
 
 ### 4.3. Riesgo residual aceptado
 
@@ -125,7 +139,9 @@ Identificadores de `tornado`: CVE-2026-115927, CVE-2026-116577 y CVE-2026-116578
 
 Identificadores de `filelock`: CVE-2026-112906 a CVE-2026-112915 (10 identificadores consecutivos), CVE-2026-112934, CVE-2026-112935 y CVE-2026-112937 a CVE-2026-112941 (5 identificadores consecutivos).
 
-La aceptación es explícita y revisable: cada identificador está escrito en el `Makefile`, en las variables `VULNS_ACEPTADAS_PILLOW`, `VULNS_ACEPTADAS_TORNADO` y `VULNS_ACEPTADAS_FILELOCK`, y `make security` los pasa a pip-audit con `--ignore-vuln`. Así el comando termina en éxito ("No known vulnerabilities found, 59 ignored") y falla si encuentra una vulnerabilidad cuyo identificador no está en la lista de excepciones. Las excepciones deben revisarse cuando cambien las versiones de las dependencias. `make security-report` genera `reports/security/pip_audit_report.md` sin esas omisiones, para que el reporte liste también lo aceptado.
+En `requirements-serving.txt` solo aparecen las 39 de `pillow`: la imagen no instala `tornado` ni `filelock`. La imagen no abre imágenes; la API solo recibe JSON.
+
+La aceptación es explícita y revisable: cada identificador está escrito en el `Makefile`, en las variables `VULNS_ACEPTADAS_PILLOW`, `VULNS_ACEPTADAS_TORNADO` y `VULNS_ACEPTADAS_FILELOCK`, y `make security` los pasa a pip-audit con `--ignore-vuln`. Así el comando termina en éxito ("No known vulnerabilities found, 59 ignored" en `requirements.txt` y "39 ignored" en `requirements-serving.txt`) y falla si encuentra una vulnerabilidad cuyo identificador no está en la lista de excepciones. Las excepciones deben revisarse cuando cambien las versiones de las dependencias. `make security-report` genera `reports/security/pip_audit_report.md` y `reports/security/pip_audit_servicio_report.md` sin esas omisiones, para que los reportes listen también lo aceptado.
 
 Análisis de superficie de ataque:
 
@@ -139,16 +155,16 @@ Control compensatorio: no abrir con el entorno del proyecto imágenes de origen 
 
 ### 5.1. OWASP Machine Learning Security Top 10
 
-- ML01, manipulación de entradas. El proyecto no tiene defensas contra ataques de evasión. Lo que sí hace es validar los datos de entrada: la ingesta en `mibici/dataset.py` falla si falta alguna columna esperada, si un identificador tiene nulos o no es entero y si una fecha no tiene el formato `%Y-%m-%d %H:%M:%S`; también advierte, sin filtrar, cuando un viaje inicia fuera de la ventana de análisis. `mibici/features.py` descarta los viajes espurios de menos de un minuto que terminan donde empezaron, y `mibici/quality.py` corre las suites `data_integrity` y `train_test_validation` de DeepChecks sobre muestras deterministas.
+- ML01, manipulación de entradas. El proyecto no tiene defensas contra ataques de evasión. Lo que sí hace es validar los datos de entrada. La API del servicio rechaza con 422, antes de llegar al modelo, las peticiones con campos faltantes o desconocidos, tipos incorrectos o valores fuera de rango (`app/schemas.py`). En el entrenamiento, la ingesta en `mibici/dataset.py` falla si falta alguna columna esperada, si un identificador tiene nulos o no es entero y si una fecha no tiene el formato `%Y-%m-%d %H:%M:%S`; también advierte, sin filtrar, cuando un viaje inicia fuera de la ventana de análisis. `mibici/features.py` descarta los viajes espurios de menos de un minuto que terminan donde empezaron, y `mibici/quality.py` corre las suites `data_integrity` y `train_test_validation` de DeepChecks sobre muestras deterministas.
 - ML02, envenenamiento de datos. `references/manifiesto_datos.json` guarda la URL, el número de registros y el SHA-256 de cada archivo crudo descargado, y una `version_datos` derivada de esos hashes. Cada corrida de baselines y de candidatos registra `version_datos` como parámetro en MLflow, y cada corrida de candidatos adjunta además el manifiesto como artefacto. Esto permite saber con qué archivos crudos se entrenó cada modelo y detectar si cambian; no detecta datos alterados en el origen antes de la descarga.
 - ML03 y ML04, inversión de modelo e inferencia de pertenencia. Los modelos se entrenan sin datos personales (sección 2.3) y emiten viajes por estación y hora (P1), probabilidades de riesgo por estación y hora (P2) y etiquetas de grupo por estación (P3). No hay datos de personas que un modelo pueda revelar.
-- ML06, ataques a la cadena de suministro. `requirements.txt` fija versiones exactas y `make security` audita esas versiones con pip-audit, con el riesgo aceptado declarado por identificador (sección 4.3).
+- ML06, ataques a la cadena de suministro. `requirements.txt` y `requirements-serving.txt` fijan versiones exactas y `make security` audita las dos con pip-audit, con el riesgo aceptado declarado por identificador (sección 4.3). La imagen del servicio empaqueta una versión exacta del modelo, exportada del Model Registry con su nombre, alias y versión en `models/p1/metadata.json`.
 
 ### 5.2. NIST AI Risk Management Framework (AI RMF 1.0)
 
 - GOVERN. Los cambios entran a `main` por pull request, y la tabla de contribuciones del README registra quién hizo cada parte y qué revisiones aprobó.
 - MAP. Este documento enumera las dependencias con vulnerabilidades conocidas, quién las instala y qué parte del proyecto las usa.
-- MEASURE. Bandit reporta 0 hallazgos con 5 omisiones justificadas por línea; pip-audit reporta 0 vulnerabilidades fuera de las 59 aceptadas; pytest aprueba 220 de 220 pruebas; DeepChecks genera reportes de integridad y drift de P1, P2, P3 y del dataset base.
+- MEASURE. Bandit reporta 0 hallazgos con 5 omisiones justificadas por línea; pip-audit reporta 0 vulnerabilidades fuera de las aceptadas (59 en `requirements.txt` y 39 en `requirements-serving.txt`); pytest aprueba 240 de 240 pruebas; DeepChecks genera reportes de integridad y drift de P1, P2, P3 y del dataset base.
 - MANAGE. El riesgo residual está declarado identificador por identificador en el `Makefile`, con su control compensatorio y la condición para retirarlo.
 
 ## 6. Reproducción
@@ -160,11 +176,12 @@ Desde la raíz del repositorio, con el entorno activado:
 make security
 
 # Por separado
-bandit -c .bandit -r mibici/ tests/
-pip-audit -r requirements.txt --no-deps --disable-pip   # lista también las 59 aceptadas
+bandit -c .bandit -r app/ mibici/ tests/
+pip-audit -r requirements.txt --no-deps --disable-pip           # lista también las 59 aceptadas
+pip-audit -r requirements-serving.txt --no-deps --disable-pip   # lista también las 39 aceptadas
 
 # Reportes en reports/security/
 make security-report
 ```
 
-`make security-report` escribe `reports/security/bandit_report.txt` y `reports/security/pip_audit_report.md`. La carpeta está en `.gitignore`, así que los reportes se regeneran en cada máquina.
+`make security-report` escribe `reports/security/bandit_report.txt`, `reports/security/pip_audit_report.md` y `reports/security/pip_audit_servicio_report.md`. La carpeta está en `.gitignore`, así que los reportes se regeneran en cada máquina.

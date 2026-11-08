@@ -30,7 +30,9 @@ IGNORAR_VULNS = $(foreach id,$(VULNS_ACEPTADAS),--ignore-vuln $(id))
 
 # requirements.txt fija versiones exactas, así que pip-audit lo lee sin resolver dependencias
 # ni crear un entorno temporal. La línea "-e ." aparece como omitida porque es el propio proyecto.
+# requirements-serving.txt (las dependencias de la imagen de Docker) se audita igual.
 PIP_AUDIT = pip-audit -r requirements.txt --no-deps --disable-pip --progress-spinner off
+PIP_AUDIT_SERVICIO = pip-audit -r requirements-serving.txt --no-deps --disable-pip --progress-spinner off
 
 #################################################################################
 # COMMANDS                                                                      #
@@ -79,11 +81,12 @@ quality:
 	$(PYTHON_INTERPRETER) -m mibici.quality --pregunta all --max-filas 5000
 
 
-## Run security analysis (Bandit SAST and pip-audit SCA over requirements.txt)
+## Run security analysis (Bandit SAST and pip-audit SCA over both requirements files)
 .PHONY: security
 security:
-	bandit -c .bandit -r mibici/ tests/
+	bandit -c .bandit -r app/ mibici/ tests/
 	$(PIP_AUDIT) $(IGNORAR_VULNS)
+	$(PIP_AUDIT_SERVICIO) $(IGNORAR_VULNS)
 
 
 ## Generate detailed security reports in reports/security/
@@ -91,8 +94,9 @@ security:
 .PHONY: security-report
 security-report:
 	mkdir -p reports/security
-	bandit -c .bandit -r mibici/ tests/ -f txt -o reports/security/bandit_report.txt || true
+	bandit -c .bandit -r app/ mibici/ tests/ -f txt -o reports/security/bandit_report.txt || true
 	$(PIP_AUDIT) -f markdown -o reports/security/pip_audit_report.md || true
+	$(PIP_AUDIT_SERVICIO) -f markdown -o reports/security/pip_audit_servicio_report.md || true
 	@echo "Security reports generated in reports/security/"
 
 
@@ -114,6 +118,24 @@ create_environment:
 .PHONY: data
 data: requirements
 	$(PYTHON_INTERPRETER) -m mibici.dataset
+
+
+## Export the P1 champion from the Model Registry to models/p1/ (needs the MLflow server)
+.PHONY: modelo-servicio
+modelo-servicio:
+	$(PYTHON_INTERPRETER) -m mibici.modeling.serving --reemplazar
+
+
+## Build the Docker image of the prediction API
+.PHONY: docker-build
+docker-build:
+	docker build -t mibici-api .
+
+
+## Run the prediction API container on port 8000
+.PHONY: docker-run
+docker-run:
+	docker run -d --name mibici-api -p 8000:8000 mibici-api
 
 
 #################################################################################
