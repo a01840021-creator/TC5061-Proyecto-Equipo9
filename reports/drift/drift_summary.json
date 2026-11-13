@@ -1,0 +1,143 @@
+{
+  "test": {
+    "total_columnas": 9,
+    "columnas_con_drift": 4,
+    "proporcion_con_drift": 0.4444,
+    "umbral_proporcion": 0.5,
+    "drift_dataset": false,
+    "variables_con_drift": [
+      "demanda",
+      "rezago_168h",
+      "rezago_24h",
+      "rezago_48h"
+    ],
+    "variables": {
+      "dpcapacity": {
+        "metodo": "Wasserstein distance (normed)",
+        "valor": 0.009,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "rezago_24h": {
+        "metodo": "Wasserstein distance (normed)",
+        "valor": 0.1754,
+        "umbral": 0.1,
+        "drift": true
+      },
+      "rezago_48h": {
+        "metodo": "Wasserstein distance (normed)",
+        "valor": 0.1588,
+        "umbral": 0.1,
+        "drift": true
+      },
+      "rezago_168h": {
+        "metodo": "Wasserstein distance (normed)",
+        "valor": 0.149,
+        "umbral": 0.1,
+        "drift": true
+      },
+      "demanda": {
+        "metodo": "Wasserstein distance (normed)",
+        "valor": 0.1971,
+        "umbral": 0.1,
+        "drift": true
+      },
+      "estacion_id": {
+        "metodo": "Jensen-Shannon distance",
+        "valor": 0.0504,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "hora": {
+        "metodo": "Jensen-Shannon distance",
+        "valor": 0.0104,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "dia_semana": {
+        "metodo": "Jensen-Shannon distance",
+        "valor": 0.0364,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "es_fin_de_semana": {
+        "metodo": "Jensen-Shannon distance",
+        "valor": 0.0101,
+        "umbral": 0.1,
+        "drift": false
+      }
+    },
+    "periodo_referencia": "2026-04-01/2026-07-31",
+    "periodo_actual": "2026-09-01/2026-09-30",
+    "version_datos": "0c4b34e5425a",
+    "max_filas": 50000
+  },
+  "validacion": {
+    "total_columnas": 9,
+    "columnas_con_drift": 0,
+    "proporcion_con_drift": 0.0,
+    "umbral_proporcion": 0.5,
+    "drift_dataset": false,
+    "variables_con_drift": [],
+    "variables": {
+      "dpcapacity": {
+        "metodo": "Wasserstein distance (normed)",
+        "valor": 0.0068,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "rezago_24h": {
+        "metodo": "Wasserstein distance (normed)",
+        "valor": 0.0446,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "rezago_48h": {
+        "metodo": "Wasserstein distance (normed)",
+        "valor": 0.0483,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "rezago_168h": {
+        "metodo": "Wasserstein distance (normed)",
+        "valor": 0.0352,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "demanda": {
+        "metodo": "Wasserstein distance (normed)",
+        "valor": 0.0438,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "estacion_id": {
+        "metodo": "Jensen-Shannon distance",
+        "valor": 0.0466,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "hora": {
+        "metodo": "Jensen-Shannon distance",
+        "valor": 0.0108,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "dia_semana": {
+        "metodo": "Jensen-Shannon distance",
+        "valor": 0.0486,
+        "umbral": 0.1,
+        "drift": false
+      },
+      "es_fin_de_semana": {
+        "metodo": "Jensen-Shannon distance",
+        "valor": 0.0358,
+        "umbral": 0.1,
+        "drift": false
+      }
+    },
+    "periodo_referencia": "2026-04-01/2026-07-31",
+    "periodo_actual": "2026-08-01/2026-08-31",
+    "version_datos": "0c4b34e5425a",
+    "max_filas": 50000
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "periodo_referencia": "2026-04-01/2026-07-31",
+  "periodo_actual": "2026-09-01/2026-09-30",
+  "version_datos": "0c4b34e5425a",
+  "semilla": 42,
+  "max_filas": 50000,
+  "referencia": {
+    "filas": 1335840,
+    "fecha_min": "2026-04-08 00:00:00",
+    "fecha_max": "2026-07-31 23:00:00",
+    "nulos": {
+      "estacion_id": 0,
+      "dpcapacity": 0,
+      "hora": 0,
+      "dia_semana": 0,
+      "es_fin_de_semana": 0,
+      "rezago_24h": 0,
+      "rezago_48h": 0,
+      "rezago_168h": 0,
+      "demanda": 0
+    },
+    "infinitos": 0,
+    "duplicados_clave": 0,
+    "tipos": {
+      "estacion_id": "int64",
+      "dpcapacity": "int64",
+      "hora": "int32",
+      "dia_semana": "int32",
+      "es_fin_de_semana": "int64",
+      "rezago_24h": "float64",
+      "rezago_48h": "float64",
+      "rezago_168h": "float64",
+      "demanda": "int64"
+    }
+  },
+  "actual": {
+    "filas": 348480,
+    "fecha_min": "2026-09-01 00:00:00",
+    "fecha_max": "2026-09-30 23:00:00",
+    "nulos": {
+      "estacion_id": 0,
+      "dpcapacity": 0,
+      "hora": 0,
+      "dia_semana": 0,
+      "es_fin_de_semana": 0,
+      "rezago_24h": 0,
+      "rezago_48h": 0,
+      "rezago_168h": 0,
+      "demanda": 0
+    },
+    "infinitos": 0,
+    "duplicados_clave": 0,
+    "tipos": {
+      "estacion_id": "int64",
+      "dpcapacity": "int64",
+      "hora": "int32",
+      "dia_semana": "int32",
+      "es_fin_de_semana": "int64",
+      "rezago_24h": "float64",
+      "rezago_48h": "float64",
+      "rezago_168h": "float64",
+      "demanda": "int64"
+    },
+    "categorias_nuevas": {
+      "estacion_id": [],
+      "hora": [],
+      "dia_semana": [],
+      "es_fin_de_semana": []
+    }
+  }
+}
