@@ -1,0 +1,97 @@
+{
+  "interpretaciones": {
+    "test": {
+      "periodo": "test",
+      "periodo_referencia": "2026-04-01/2026-07-31",
+      "periodo_actual": "2026-09-01/2026-09-30",
+      "version_datos": "0c4b34e5425a",
+      "drift_dataset_evidently": false,
+      "proporcion_columnas_drift": 0.4444,
+      "entradas_con_drift": [
+        "rezago_168h",
+        "rezago_24h",
+        "rezago_48h"
+      ],
+      "entradas_criticas_con_drift": [
+        "rezago_168h",
+        "rezago_24h",
+        "rezago_48h"
+      ],
+      "objetivo_con_drift": true,
+      "prioridad": "alta",
+      "detalle_drift": {
+        "demanda": {
+          "metodo": "Wasserstein distance (normed)",
+          "valor": 0.1971,
+          "umbral": 0.1,
+          "drift": true,
+          "razon_umbral": 1.971,
+          "rol": "objetivo"
+        },
+        "rezago_168h": {
+          "metodo": "Wasserstein distance (normed)",
+          "valor": 0.149,
+          "umbral": 0.1,
+          "drift": true,
+          "razon_umbral": 1.49,
+          "rol": "entrada"
+        },
+        "rezago_24h": {
+          "metodo": "Wasserstein distance (normed)",
+          "valor": 0.1754,
+          "umbral": 0.1,
+          "drift": true,
+          "razon_umbral": 1.754,
+          "rol": "entrada"
+        },
+        "rezago_48h": {
+          "metodo": "Wasserstein distance (normed)",
+          "valor": 0.1588,
+          "umbral": 0.1,
+          "drift": true,
+          "razon_umbral": 1.588,
+          "rol": "entrada"
+        }
+      },
+      "hallazgos": [
+        "Drift en entradas del modelo: rezago_168h, rezago_24h, rezago_48h.",
+        "La distribución del objetivo demanda también cambió.",
+        "Evidently no marcó drift global porque la proporción de columnas no alcanzó el umbral, pero sí existen cambios relevantes a nivel de variable."
+      ]
+    },
+    "validacion": {
+      "periodo": "validacion",
+      "periodo_referencia": "2026-04-01/2026-07-31",
+      "periodo_actual": "2026-08-01/2026-08-31",
+      "version_datos": "0c4b34e5425a",
+      "drift_dataset_evidently": false,
+      "proporcion_columnas_drift": 0.0,
+      "entradas_con_drift": [],
+      "entradas_criticas_con_drift": [],
+      "objetivo_con_drift": false,
+      "prioridad": "baja",
+      "detalle_drift": {},
+      "hallazgos": [
+        "No se detectó drift en entradas ni en el objetivo."
+      ]
+    }
+  },
+  "continuous_training": {
+    "accion": "evaluar_challenger",
+    "periodos_con_senal_relevante": [
+      "test"
+    ],
+    "calidad_datos_ok": true,
+    "degradacion_confirmada": false,
+    "challenger_supera_champion": false,
+    "justificacion": "Hay drift en variables críticas u objetivo, pero falta demostrar degradación del champion con etiquetas del periodo actual.",
+    "criterios_promocion": [
+      "Mismo conjunto de evaluación para champion y challenger.",
+      "Mejora en MAE con intervalo de confianza favorable.",
+      "Sin deterioro material en RMSE, R² ni latencia.",
+      "Datos validados y linaje completo en MLflow.",
+      "Despliegue gradual con capacidad de rollback."
+    ]
+  },
+  "advertencia": "El drift estadístico no demuestra por sí solo degradación predictiva ni autoriza la promoción automática de un modelo."
+}
