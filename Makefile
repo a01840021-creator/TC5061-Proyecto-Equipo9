@@ -4,7 +4,7 @@
 
 PROJECT_NAME = TC5061-Proyecto-Equipo9
 PYTHON_VERSION = 3.10
-PYTHON_INTERPRETER = python
+PYTHON_INTERPRETER ?= $(shell if [ -f .venv/bin/python ]; then echo .venv/bin/python; else echo python; fi)
 
 # Riesgo aceptado temporalmente en pip-audit. Las versiones corregidas de pillow (13.0.0),
 # tornado (6.6) y filelock (4.2.1) requieren Python 3.11 o superior; soupsieve (3.0.2)
@@ -21,7 +21,7 @@ VULNS_ACEPTADAS_PILLOW = \
 	CVE-2026-112891 CVE-2026-112892 CVE-2026-112893 CVE-2026-112894 CVE-2026-112895 \
 	CVE-2026-112897 CVE-2026-112899 CVE-2026-112900 GHSA-78g4-xqwv-q3g8 \
         PYSEC-2026-4363 CVE-2026-128067 CVE-2026-128066
-VULNS_ACEPTADAS_TORNADO = CVE-2026-115927 CVE-2026-116577 CVE-2026-116578
+VULNS_ACEPTADAS_TORNADO = CVE-2026-115927 CVE-2026-116577 CVE-2026-116578 CVE-2026-126347
 VULNS_ACEPTADAS_FILELOCK = \
 	CVE-2026-112906 CVE-2026-112907 CVE-2026-112908 CVE-2026-112909 CVE-2026-112910 \
 	CVE-2026-112911 CVE-2026-112912 CVE-2026-112913 CVE-2026-112914 CVE-2026-112915 \
@@ -152,6 +152,31 @@ smoke-test:
 .PHONY: smoke-test-container
 smoke-test-container:
 	./scripts/smoke_test.sh -c
+
+
+## Run data drift analysis with Evidently for P1
+.PHONY: drift
+drift:
+	$(PYTHON_INTERPRETER) -m mibici.monitoring.drift --actual test
+
+
+## Run data drift summary
+.PHONY: drift-resumen
+drift-resumen:
+	$(PYTHON_INTERPRETER) -m mibici.monitoring.resumen
+
+
+## Run data drift interpretation and Continuous Training policy
+.PHONY: drift-interpretacion
+drift-interpretacion:
+	$(PYTHON_INTERPRETER) -m mibici.monitoring.interpretacion
+
+
+## Run A/B testing between Champion and Challenger on September 2026
+.PHONY: ab-test
+ab-test:
+	$(PYTHON_INTERPRETER) -m mibici.monitoring.ab_test
+
 
 
 #################################################################################
