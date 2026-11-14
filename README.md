@@ -504,3 +504,45 @@ Ejecución del contenedor en Docker (`docker ps`), verificación del estado `(he
 ![Pruebas de humo y validaciones Pydantic](reports/figures/evidencia_2_smoke_tests.png)
 
 Validación de esquemas con Pydantic (rechazo con 422 ante horas inválidas, inconsistencias de calendario o campos requeridos omitidos) y ejecución completa de la suite de pruebas de humo automatizadas (`scripts/smoke_test.sh`) con 10/10 pruebas aprobadas (100%). El reporte técnico reproducible se encuentra en [`docs/evidencias/evidencia_servicio_contenedor.md`](docs/evidencias/evidencia_servicio_contenedor.md).
+
+### Entrega 5 (Semana 9): Monitoreo y reporte de drift en el proyecto
+
+Monitoreo continuo de datos y modelos para dotar al proyecto de la capacidad de auto-vigilarse operativamente, detectar desviaciones frente a entrenamiento y fundamentar con pruebas estadísticas si una nueva versión del modelo debe ser promovida a producción.
+
+#### 1. Resumen de resultados de Data Drift (Evidently)
+- **Periodo de referencia (entrenamiento):** 1 de abril al 31 de julio de 2026 (1,335,840 filas).
+- **Periodo de prueba (producción):** 1 al 30 de septiembre de 2026 (348,480 filas).
+- **Métrica y umbral:** Distancia de Wasserstein normalizada con umbral de 0.10.
+- **Hallazgo:** Drift severo en 4 de las 9 variables: `rezago_24h` (0.1754), `rezago_48h` (0.1588), `rezago_168h` (0.1490) y `demanda` (0.1971). Variables estructurales y temporales (`dpcapacity`, `hora`, `dia_semana`) permanecieron estables.
+
+#### 2. Tabla comparativa de A/B Testing (Septiembre 2026)
+
+| Métrica | Champion (v1) | Challenger (v2) | Diferencia Absoluta | Variación Relativa |
+| :--- | :---: | :---: | :---: | :---: |
+| **MAE (Error Absoluto Medio)** | 0.8316 | 0.8295 | -0.0021 | -0.25% |
+| **RMSE (Raíz de Error Cuadrático)** | 1.6061 | 1.5946 | -0.0115 | -0.72% |
+| **WAPE (Error Ponderado)** | 61.44% | 61.29% | -0.15% | - |
+| **$R^2$ (Ajuste)** | 0.6310 | 0.6362 | +0.0052 | - |
+| **Latencia media** | 0.0010 ms | 0.0010 ms | +0.0000 ms | Neutral |
+
+- **Significancia estadística (prueba $t$ pareada):** $t = 8.3129$, valor $p = 9.37 \times 10^{-17}$ ($p < 0.001$).
+- **Prueba no paramétrica de Wilcoxon:** $W = 97,656,450$, valor $p = 0.0040$ ($p < 0.01$).
+- **Intervalo de confianza al 95% para la mejora:** $[+0.0016, +0.0026]$ viajes/hora (estrictamente favorable).
+- **Decisión y política de Continuous Training:** **Promover el Challenger (v2) mediante despliegue gradual (Canary Release)** con capacidad de *rollback* instantáneo en el Model Registry de MLflow (`models:/mibici-equipo09-p1-demanda@champion`).
+
+#### 3. Comandos de reproducción rápida
+
+```bash
+# Ejecutar reporte de drift con Evidently
+make drift
+
+# Ejecutar síntesis programática e interpretación de política de CT
+make drift-resumen
+make drift-interpretacion
+
+# Ejecutar pipeline de A/B testing entre Champion y Challenger
+make ab-test
+```
+
+El reporte ejecutivo final en PDF se entrega en la plataforma Canvas con el nombre `TC5061_Drift_ABTest_Equipo09.pdf`.
+
