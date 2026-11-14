@@ -220,26 +220,54 @@ def test_predecir_con_latencia():
     assert lat >= 0.0
 
 
-def test_ab_test_cli_smoke(tmp_path: Path):
-    """Verifica que la CLI de ab_test se ejecute correctamente con max-filas."""
-    runner = CliRunner()
-    modelo_path = Path("models/p1")
+def test_ab_test_cli_smoke(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    """Verifica que la CLI de ab_test se ejecute correctamente en entorno aislado/CI."""
+    import pandas as pd
 
-    # Si models/p1 existe, probamos la CLI con max-filas
-    if modelo_path.exists():
-        resultado = runner.invoke(
-            ab_test.app,
-            [
-                "--modelo-a",
-                str(modelo_path),
-                "--modelo-b",
-                "auto",
-                "--max-filas",
-                "100",
-                "--salida",
-                str(tmp_path),
-            ],
-        )
-        assert resultado.exit_code == 0
-        assert "REPORTE DE A/B TESTING" in resultado.output
-        assert (tmp_path / "ab_test_results.json").exists()
+    rng = np.random.default_rng(42)
+    n_samples = 30
+    X_dummy = pd.DataFrame({col: rng.standard_normal(n_samples) for col in ab_test.FEATURES_P1})
+    y_dummy = np.linspace(1.0, 10.0, n_samples)
+
+    class ModeloMock:
+        def __init__(self, offset: float, modulo: int = 5):
+            self.offset = offset
+            self.modulo = modulo
+
+        def predict(self, X):
+            n = len(X)
+            return np.linspace(1.0, 10.0, n) + self.offset + (np.arange(n) % self.modulo) * 0.03
+
+    monkeypatch.setattr(
+        ab_test,
+        "preparar_datos_evaluacion",
+        lambda **kwargs: (X_dummy, y_dummy),
+    )
+    monkeypatch.setattr(
+        ab_test,
+        "cargar_modelo",
+        lambda *args, **kwargs: ModeloMock(offset=1.0, modulo=7),
+    )
+    monkeypatch.setattr(
+        ab_test,
+        "entrenar_challenger_referencia",
+        lambda **kwargs: ModeloMock(offset=0.2, modulo=3),
+    )
+
+    runner = CliRunner()
+    resultado = runner.invoke(
+        ab_test.app,
+        [
+            "--modelo-a",
+            "dummy_a.pkl",
+            "--modelo-b",
+            "auto",
+            "--max-filas",
+            "30",
+            "--salida",
+            str(tmp_path),
+        ],
+    )
+    assert resultado.exit_code == 0, f"Error en CLI: {resultado.output}"
+    assert "REPORTE DE A/B TESTING" in resultado.output
+    assert (tmp_path / "ab_test_results.json").exists()
