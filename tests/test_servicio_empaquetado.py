@@ -9,7 +9,13 @@ import pytest
 from sklearn.linear_model import LinearRegression
 
 from app.model_service import ModelService
-from mibici.config import METADATOS_SERVICIO, MODELO_SERVICIO_DIR
+from mibici.config import (
+    METADATOS_SERVICIO,
+    MODELO_CHALLENGER_DIR,
+    MODELO_SERVICIO_DIR,
+    PERIODO_TRAIN_CANDIDATOS,
+    PERIODO_TRAIN_CHALLENGER,
+)
 from mibici.modeling.serving import exportar_modelo
 
 FEATURES_P1 = [
@@ -89,6 +95,9 @@ def test_exporta_del_registry_una_carpeta_que_la_api_carga(mlflow_registro_tempo
     assert json.loads((destino / METADATOS_SERVICIO).read_text(encoding="utf-8")) == metadatos
     assert metadatos["version"] == "1"
     assert metadatos["model_uri"] == "models:/modelo-prueba@champion"
+    # Sin etiqueta ni parámetro, el periodo de entrenamiento queda explícitamente vacío
+    assert metadatos["periodo_train"] is None
+    assert metadatos["periodo_train_fuente"] is None
     servicio = ModelService(model_uri=str(destino))
     servicio.load()
     assert servicio.metadata["version"] == "1"
@@ -109,3 +118,54 @@ def test_exportar_no_sustituye_un_modelo_sin_reemplazar(mlflow_registro_temporal
         exportar_modelo("modelo-prueba", "champion", destino, mlflow_registro_temporal)
 
     assert (destino / "MLmodel").read_text(encoding="utf-8") == "flavors: {}\n"
+
+
+def registrar_modelo_prueba(client, parametros: dict) -> str:
+    """Registra un modelo lineal mínimo con alias champion y devuelve su versión."""
+    X = pd.DataFrame(np.arange(24, dtype="float64").reshape(8, 3), columns=["a", "b", "c"])
+    estimador = LinearRegression().fit(X, X["a"])
+    with mlflow.start_run():
+        mlflow.log_params(parametros)
+        info = mlflow.sklearn.log_model(
+            estimador, name="model", serialization_format="cloudpickle", pip_requirements=[]
+        )
+    version = mlflow.register_model(info.model_uri, "modelo-prueba").version
+    client.set_registered_model_alias("modelo-prueba", "champion", version)
+    return version
+
+
+def test_exporta_el_periodo_de_entrenamiento_del_parametro_de_la_corrida(
+    mlflow_registro_temporal, tmp_path
+):
+    """Sin etiqueta train_period, como el champion v1, se usa periodo_train de la corrida."""
+    client = mlflow_registro_temporal
+    registrar_modelo_prueba(client, {"periodo_train": "2026-04-01/2026-07-31"})
+
+    metadatos = exportar_modelo("modelo-prueba", "champion", tmp_path / "p1", client)
+
+    assert metadatos["periodo_train"] == "2026-04-01/2026-07-31"
+    assert metadatos["periodo_train_fuente"].startswith("parámetro periodo_train")
+    guardado = json.loads((tmp_path / "p1" / METADATOS_SERVICIO).read_text(encoding="utf-8"))
+    assert guardado["periodo_train"] == "2026-04-01/2026-07-31"
+
+
+def test_la_etiqueta_train_period_tiene_prioridad_sobre_el_parametro(
+    mlflow_registro_temporal, tmp_path
+):
+    client = mlflow_registro_temporal
+    version = registrar_modelo_prueba(client, {"periodo_train": "2026-04-01/2026-07-31"})
+    client.set_model_version_tag("modelo-prueba", version, "train_period", "2026-04-01/2026-09-15")
+
+    metadatos = exportar_modelo("modelo-prueba", "champion", tmp_path / "p1", client)
+
+    assert metadatos["periodo_train"] == "2026-04-01/2026-09-15"
+    assert metadatos["periodo_train_fuente"] == "etiqueta de versión train_period"
+
+
+def test_metadata_de_los_modelos_empaquetados_declara_su_entrenamiento():
+    """El champion v1 se entrenó de abril a julio y el challenger v3 hasta el 15 de septiembre."""
+    champion = json.loads((MODELO_SERVICIO_DIR / METADATOS_SERVICIO).read_text("utf-8"))
+    challenger = json.loads((MODELO_CHALLENGER_DIR / METADATOS_SERVICIO).read_text("utf-8"))
+
+    assert champion["periodo_train"] == PERIODO_TRAIN_CANDIDATOS
+    assert challenger["periodo_train"] == PERIODO_TRAIN_CHALLENGER

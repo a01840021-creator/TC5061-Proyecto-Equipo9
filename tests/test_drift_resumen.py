@@ -1,6 +1,9 @@
+import json
+
 import numpy as np
 import pandas as pd
 import pytest
+from typer.testing import CliRunner
 
 from mibici.monitoring import drift, resumen
 
@@ -69,3 +72,30 @@ def test_resumir_pruebas_de_valor_p_marcan_drift_con_valor_bajo(tmp_path):
 def test_resumir_falla_si_no_coincide_con_el_conteo_de_evidently(tmp_path):
     with pytest.raises(ValueError, match="Evidently reporta"):
         resumen.resumir(_json_evidently(tmp_path, conteo=2))
+
+
+def test_resumen_incluye_la_primera_quincena_junto_a_los_demas_periodos(tmp_path):
+    for actual, desplazamiento in (("test", 6), ("validacion", 0), ("primera_quincena", 4)):
+        drift.ejecutar(
+            _tablon(),
+            _tablon(desplazamiento=desplazamiento, semilla=1),
+            tmp_path,
+            drift.prefijo_reporte(actual),
+        )
+        chequeos = {
+            "periodo_referencia": "2026-04-01/2026-07-31",
+            "periodo_actual": drift.PERIODOS_ACTUAL[actual],
+            "version_datos": "v-prueba",
+            "max_filas": 500,
+        }
+        (tmp_path / f"chequeos_datos_{actual}.json").write_text(
+            json.dumps(chequeos), encoding="utf-8"
+        )
+
+    resultado = CliRunner().invoke(resumen.app, ["--directorio", str(tmp_path)])
+
+    assert resultado.exit_code == 0, resultado.output
+    periodos = json.loads((tmp_path / "drift_summary.json").read_text(encoding="utf-8"))
+    assert list(periodos) == ["test", "validacion", "primera_quincena"]
+    assert periodos["primera_quincena"]["periodo_actual"] == "2026-09-01/2026-09-15"
+    assert "demanda" in periodos["primera_quincena"]["variables_con_drift"]

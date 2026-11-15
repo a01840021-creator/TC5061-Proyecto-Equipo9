@@ -1,7 +1,9 @@
 """Reporte de data drift de P1 con Evidently.
 
 Referencia: periodo con el que se ajustan los candidatos (abril a julio).
-Actual: septiembre (prueba) o, como comparación intermedia, agosto (validación).
+Actual: septiembre (prueba); como comparación intermedia, agosto (validación); o la primera
+quincena de septiembre, la información disponible al decidir el reentrenamiento del
+challenger el 15 de septiembre. Cada periodo escribe sus archivos con su propio prefijo.
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ import typer
 
 from mibici.config import (
     PERIODO_TEST,
+    PERIODO_TEST_PRIMERA_QUINCENA,
     PERIODO_TRAIN_CANDIDATOS,
     PERIODO_VALIDACION,
     REPORTS_DIR,
@@ -52,7 +55,11 @@ NUMERICAS = ["dpcapacity", "rezago_24h", "rezago_48h", "rezago_168h", OBJETIVO]
 # hora y dia_semana son ciclos, no cantidades: se tratan como categorías
 CATEGORICAS = ["estacion_id", "hora", "dia_semana", "es_fin_de_semana"]
 COLUMNAS = FEATURES + [OBJETIVO]
-PERIODOS_ACTUAL = {"test": PERIODO_TEST, "validacion": PERIODO_VALIDACION}
+PERIODOS_ACTUAL = {
+    "test": PERIODO_TEST,
+    "validacion": PERIODO_VALIDACION,
+    "primera_quincena": PERIODO_TEST_PRIMERA_QUINCENA,
+}
 
 
 def cortar(df: pd.DataFrame, periodo: str, columna_fecha: str = FECHA) -> pd.DataFrame:
@@ -96,6 +103,11 @@ def muestrear(df: pd.DataFrame, max_filas: int) -> pd.DataFrame:
     return df.sample(n=max_filas, random_state=SEMILLA)
 
 
+def prefijo_reporte(actual: str) -> str:
+    """Prefijo del HTML y del JSON de Evidently de cada periodo actual."""
+    return "data_drift" if actual == "test" else f"data_drift_{actual}"
+
+
 def ejecutar(ref: pd.DataFrame, act: pd.DataFrame, salida: Path, prefijo: str = "data_drift"):
     """Genera el reporte de Evidently (HTML y JSON) y devuelve el resultado."""
     salida.mkdir(parents=True, exist_ok=True)
@@ -111,13 +123,19 @@ def ejecutar(ref: pd.DataFrame, act: pd.DataFrame, salida: Path, prefijo: str = 
 
 @app.command()
 def main(
-    actual: str = typer.Option("test", help="Periodo actual: 'test' (septiembre) o 'validacion'."),
+    actual: str = typer.Option(
+        "test",
+        help=(
+            "Periodo actual: 'test' (septiembre), 'validacion' (agosto) o "
+            "'primera_quincena' (1 al 15 de septiembre)."
+        ),
+    ),
     max_filas: int = typer.Option(50_000, min=0, help="Filas por conjunto; 0 = todas."),
     salida: Annotated[Path, typer.Option(help="Carpeta de salida.")] = DIR_DRIFT,
 ) -> None:
     """Compara la referencia de entrenamiento con un periodo posterior de P1."""
     if actual not in PERIODOS_ACTUAL:
-        raise typer.BadParameter("Usa 'test' o 'validacion'.")
+        raise typer.BadParameter(f"Usa uno de {', '.join(map(repr, PERIODOS_ACTUAL))}.")
 
     viajes, estaciones = cargar_datos_procesados()
     datos = generar_dataset_p1(viajes, estaciones)
@@ -134,7 +152,7 @@ def main(
         "actual": validar(act, "actual", ref=ref),
     }
 
-    prefijo = "data_drift" if actual == "test" else f"data_drift_{actual}"
+    prefijo = prefijo_reporte(actual)
     logger.info(f"Referencia {len(ref):,} filas; actual {len(act):,} filas")
     ejecutar(muestrear(ref, max_filas), muestrear(act, max_filas), salida, prefijo)
 

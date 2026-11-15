@@ -185,8 +185,12 @@ def registrar_configuracion(configuracion: dict[str, Any], directorio: Path) -> 
     mlflow.log_artifact(str(RUTA_CONFIG), artifact_path="config")
 
 
-def construir_regresor(configuracion: dict[str, Any]):
-    """HistGradientBoosting o Ridge estandarizado para la demanda de P1."""
+def construir_regresor(configuracion: dict[str, Any], semilla: int | None = None):
+    """HistGradientBoosting o Ridge estandarizado para la demanda de P1.
+
+    ``semilla`` fija el ``random_state`` de HistGradientBoosting; por omisión es la
+    ``SEMILLA`` global, como en los candidatos. Ridge no la usa.
+    """
     modelo = configuracion["modelo"]
     if modelo == "hist_gradient_boosting":
         return HistGradientBoostingRegressor(
@@ -194,7 +198,7 @@ def construir_regresor(configuracion: dict[str, Any]):
             max_iter=int(configuracion["max_iter"]),
             max_leaf_nodes=int(configuracion["max_leaf_nodes"]),
             l2_regularization=float(configuracion["l2_regularization"]),
-            random_state=SEMILLA,
+            random_state=SEMILLA if semilla is None else semilla,
         )
     if modelo == "ridge":
         return Pipeline(

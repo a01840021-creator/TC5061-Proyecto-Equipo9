@@ -1,7 +1,8 @@
 """Interpreta el drift de P1 y propone una acción de Continuous Training.
 
-El módulo consume ``drift_summary.json`` generado por ``monitoring.resumen``.
-No sustituye a Evidently: convierte sus resultados estadísticos en evidencia
+El módulo consume ``drift_summary.json`` generado por ``monitoring.resumen`` e interpreta
+cada periodo que contenga: septiembre (``test``), agosto (``validacion``) y la primera
+quincena de septiembre (``primera_quincena``). No sustituye a Evidently: convierte sus resultados estadísticos en evidencia
 operativa, separando variables de entrada, objetivo y decisión de promoción.
 """
 

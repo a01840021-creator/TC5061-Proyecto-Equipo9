@@ -90,6 +90,19 @@ PERIODO_VALIDACION = f"{FECHA_VALIDACION}/{FECHA_FIN_TRAIN}"
 # P3 agrupa con todo el periodo previo al corte; no tiene ventana de validación
 PERIODO_CLUSTERING = PERIODO_TRAIN
 
+# Challenger reentrenado de P1: se entrena hasta la mitad de septiembre, con datos que ya
+# contienen el drift, y se compara contra el champion en la segunda quincena. Todas las
+# fechas del A/B son posteriores a todas las de entrenamiento de ambos modelos.
+FECHA_FIN_TRAIN_CHALLENGER = "2026-09-15"
+FECHA_INICIO_AB = (date.fromisoformat(FECHA_FIN_TRAIN_CHALLENGER) + timedelta(days=1)).isoformat()
+PERIODO_TRAIN_CHALLENGER = f"{FECHA_INICIO}/{FECHA_FIN_TRAIN_CHALLENGER}"
+PERIODO_AB = f"{FECHA_INICIO_AB}/{FECHA_FIN}"
+# Drift con la información disponible al decidir el reentrenamiento (15 de septiembre):
+# del corte al último día de entrenamiento del challenger
+PERIODO_TEST_PRIMERA_QUINCENA = f"{FECHA_CORTE}/{FECHA_FIN_TRAIN_CHALLENGER}"
+# Remuestreos bootstrap de días para el intervalo de la diferencia de MAE en el A/B
+N_BOOTSTRAP_AB = 5000
+
 # P2: hay riesgo si el saldo neto de las próximas horas alcanza esta fracción de la capacidad
 UMBRAL_RIESGO_P2 = 0.30
 HORIZONTE_P2_HORAS = 2
@@ -148,5 +161,7 @@ ALIAS_CHALLENGER = "challenger"
 # Carpeta del champion de P1 exportado del Model Registry con `make modelo-servicio`. La imagen
 # de Docker la empaqueta y la API la carga por omisión (MODEL_URI en app/model_service.py).
 MODELO_SERVICIO_DIR = MODELS_DIR / "p1"
+# Carpeta del challenger reentrenado de P1, exportado con `make exportar-challenger` para el A/B
+MODELO_CHALLENGER_DIR = MODELS_DIR / "p1_challenger"
 # Archivo de la carpeta exportada con el nombre, el alias y la versión del modelo
 METADATOS_SERVICIO = "metadata.json"
