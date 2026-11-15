@@ -1,8 +1,16 @@
+import json
+
 import numpy as np
 import pandas as pd
 import pytest
+from typer.testing import CliRunner
 
-from mibici.config import PERIODO_TEST, PERIODO_TRAIN_CANDIDATOS
+from mibici.config import (
+    PERIODO_TEST,
+    PERIODO_TEST_PRIMERA_QUINCENA,
+    PERIODO_TRAIN_CANDIDATOS,
+    PERIODO_VALIDACION,
+)
 from mibici.monitoring import drift
 
 
@@ -65,3 +73,54 @@ def test_ejecutar_genera_html_y_json(tmp_path):
     drift.ejecutar(_tablon(), _tablon(desplazamiento=6, semilla=1), tmp_path)
     assert (tmp_path / "data_drift.html").exists()
     assert (tmp_path / "data_drift.json").exists()
+
+
+def test_cada_periodo_actual_tiene_su_prefijo():
+    assert drift.PERIODOS_ACTUAL == {
+        "test": PERIODO_TEST,
+        "validacion": PERIODO_VALIDACION,
+        "primera_quincena": PERIODO_TEST_PRIMERA_QUINCENA,
+    }
+    prefijos = {actual: drift.prefijo_reporte(actual) for actual in drift.PERIODOS_ACTUAL}
+    assert prefijos == {
+        "test": "data_drift",
+        "validacion": "data_drift_validacion",
+        "primera_quincena": "data_drift_primera_quincena",
+    }
+
+
+def test_cli_primera_quincena_escribe_sus_archivos_sin_tocar_los_demas(tmp_path, monkeypatch):
+    """Referencia de abril a julio y actual del 1 al 15 de septiembre, con prefijo propio."""
+    # Horas del 1 de abril al 30 de septiembre
+    tablon = _tablon(n=183 * 24)
+    monkeypatch.setattr(drift, "cargar_datos_procesados", lambda: (None, None))
+    monkeypatch.setattr(drift, "generar_dataset_p1", lambda viajes, estaciones: tablon)
+    monkeypatch.setattr(drift, "leer_version_datos", lambda: "v-prueba")
+    for archivo in ("data_drift.json", "chequeos_datos_test.json"):
+        (tmp_path / archivo).write_text("{}", encoding="utf-8")
+
+    resultado = CliRunner().invoke(
+        drift.app,
+        ["--actual", "primera_quincena", "--max-filas", "500", "--salida", str(tmp_path)],
+    )
+
+    assert resultado.exit_code == 0, resultado.output
+    assert (tmp_path / "data_drift_primera_quincena.html").exists()
+    assert (tmp_path / "data_drift_primera_quincena.json").exists()
+    chequeos = json.loads(
+        (tmp_path / "chequeos_datos_primera_quincena.json").read_text(encoding="utf-8")
+    )
+    assert chequeos["periodo_referencia"] == PERIODO_TRAIN_CANDIDATOS
+    assert chequeos["periodo_actual"] == "2026-09-01/2026-09-15"
+    assert chequeos["actual"]["fecha_min"] == "2026-09-01 00:00:00"
+    assert chequeos["actual"]["fecha_max"] == "2026-09-15 23:00:00"
+    # Los reportes de septiembre completo no se sobrescriben
+    assert (tmp_path / "data_drift.json").read_text(encoding="utf-8") == "{}"
+    assert (tmp_path / "chequeos_datos_test.json").read_text(encoding="utf-8") == "{}"
+
+
+def test_cli_rechaza_un_periodo_desconocido(tmp_path):
+    resultado = CliRunner().invoke(drift.app, ["--actual", "octubre", "--salida", str(tmp_path)])
+
+    assert resultado.exit_code != 0
+    assert "primera_quincena" in resultado.output

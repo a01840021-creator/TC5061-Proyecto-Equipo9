@@ -10,7 +10,7 @@ from typing import Annotated
 from loguru import logger
 import typer
 
-from mibici.monitoring.drift import DIR_DRIFT
+from mibici.monitoring.drift import DIR_DRIFT, PERIODOS_ACTUAL, prefijo_reporte
 
 app = typer.Typer(add_completion=False)
 
@@ -18,7 +18,8 @@ PATRON_COLUMNA = re.compile(r"column=([^,)]+)")
 PATRON_METODO = re.compile(r"method=(.+?),threshold=")
 PATRON_UMBRAL = re.compile(r"threshold=([0-9.]+)")
 PATRON_PROPORCION = re.compile(r"drift_share=([0-9.]+)")
-ARCHIVOS = {"test": "data_drift.json", "validacion": "data_drift_validacion.json"}
+# Un JSON de Evidently por periodo actual: test, validacion y primera_quincena
+ARCHIVOS = {actual: f"{prefijo_reporte(actual)}.json" for actual in PERIODOS_ACTUAL}
 
 
 def hay_drift(metodo: str, valor: float, umbral: float) -> bool:

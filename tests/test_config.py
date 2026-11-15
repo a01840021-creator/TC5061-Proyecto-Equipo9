@@ -63,3 +63,23 @@ def test_rutas_dentro_del_proyecto():
     assert config.RUTA_CONFIG.name == "config.py"
     # El manifiesto se versiona; los datos procesados no
     assert config.DATA_DIR not in config.MANIFIESTO_DATOS.parents
+
+
+def test_periodos_del_challenger_y_del_ab_sin_traslape():
+    assert config.FECHA_FIN_TRAIN_CHALLENGER == "2026-09-15"
+    assert config.FECHA_INICIO_AB == "2026-09-16"
+    assert config.PERIODO_TRAIN_CHALLENGER == f"{config.FECHA_INICIO}/2026-09-15"
+    assert config.PERIODO_AB == f"2026-09-16/{config.FECHA_FIN}"
+    # El A/B empieza después del último día de entrenamiento del challenger y del champion
+    assert config.FECHA_FIN_TRAIN_CANDIDATOS < config.FECHA_FIN_TRAIN_CHALLENGER
+    assert config.FECHA_FIN_TRAIN_CHALLENGER < config.FECHA_INICIO_AB <= config.FECHA_FIN
+    assert config.FECHA_CORTE <= config.FECHA_FIN_TRAIN_CHALLENGER
+    assert config.N_BOOTSTRAP_AB == 5000
+    assert config.MODELO_CHALLENGER_DIR == config.MODELS_DIR / "p1_challenger"
+
+
+def test_primera_quincena_de_drift_termina_con_el_entrenamiento_del_challenger():
+    assert config.PERIODO_TEST_PRIMERA_QUINCENA == "2026-09-01/2026-09-15"
+    inicio, fin = config.PERIODO_TEST_PRIMERA_QUINCENA.split("/")
+    assert inicio == config.FECHA_CORTE
+    assert fin == config.FECHA_FIN_TRAIN_CHALLENGER < config.FECHA_INICIO_AB

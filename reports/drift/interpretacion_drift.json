@@ -74,17 +74,44 @@
       "hallazgos": [
         "No se detectó drift en entradas ni en el objetivo."
       ]
+    },
+    "primera_quincena": {
+      "periodo": "primera_quincena",
+      "periodo_referencia": "2026-04-01/2026-07-31",
+      "periodo_actual": "2026-09-01/2026-09-15",
+      "version_datos": "0c4b34e5425a",
+      "drift_dataset_evidently": false,
+      "proporcion_columnas_drift": 0.1111,
+      "entradas_con_drift": [],
+      "entradas_criticas_con_drift": [],
+      "objetivo_con_drift": true,
+      "prioridad": "media",
+      "detalle_drift": {
+        "demanda": {
+          "metodo": "Wasserstein distance (normed)",
+          "valor": 0.1152,
+          "umbral": 0.1,
+          "drift": true,
+          "razon_umbral": 1.152,
+          "rol": "objetivo"
+        }
+      },
+      "hallazgos": [
+        "La distribución del objetivo demanda también cambió.",
+        "Evidently no marcó drift global porque la proporción de columnas no alcanzó el umbral, pero sí existen cambios relevantes a nivel de variable."
+      ]
     }
   },
   "continuous_training": {
-    "accion": "evaluar_challenger",
+    "accion": "reentrenar_o_ajustar_challenger",
     "periodos_con_senal_relevante": [
-      "test"
+      "test",
+      "primera_quincena"
     ],
     "calidad_datos_ok": true,
-    "degradacion_confirmada": false,
+    "degradacion_confirmada": true,
     "challenger_supera_champion": false,
-    "justificacion": "Hay drift en variables críticas u objetivo, pero falta demostrar degradación del champion con etiquetas del periodo actual.",
+    "justificacion": "La degradación está confirmada, pero todavía no existe evidencia de que el challenger sea superior.",
     "criterios_promocion": [
       "Mismo conjunto de evaluación para champion y challenger.",
       "Mejora en MAE con intervalo de confianza favorable.",

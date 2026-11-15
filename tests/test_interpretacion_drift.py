@@ -99,3 +99,24 @@ def test_construir_informe_conserva_advertencia_metodologica():
     assert "interpretaciones" in out
     assert "continuous_training" in out
     assert "no demuestra" in out["advertencia"]
+
+
+def test_informe_incluye_la_primera_quincena_y_con_degradacion_pide_reentrenar():
+    quincena = {**_periodo(), "periodo_actual": "2026-09-01/2026-09-15"}
+    datos = {
+        "test": _periodo(),
+        "validacion": _periodo(drift_rezagos=False, drift_objetivo=False),
+        "primera_quincena": quincena,
+    }
+
+    out = construir_informe(datos, degradacion_confirmada=True)
+
+    assert list(out["interpretaciones"]) == ["test", "validacion", "primera_quincena"]
+    primera = out["interpretaciones"]["primera_quincena"]
+    assert primera["periodo_actual"] == "2026-09-01/2026-09-15"
+    assert primera["prioridad"] == "alta"
+    ct = out["continuous_training"]
+    assert ct["periodos_con_senal_relevante"] == ["test", "primera_quincena"]
+    assert ct["accion"] == "reentrenar_o_ajustar_challenger"
+    assert ct["degradacion_confirmada"] is True
+    assert ct["challenger_supera_champion"] is False

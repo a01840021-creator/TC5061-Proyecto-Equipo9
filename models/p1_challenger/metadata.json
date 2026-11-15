@@ -1,0 +1,10 @@
+{
+  "model_name": "mibici-equipo09-p1-demanda",
+  "alias": "challenger",
+  "version": "3",
+  "model_uri": "models:/mibici-equipo09-p1-demanda@challenger",
+  "run_id": "3f30c52e3196483cb612dcce49fe8f8e",
+  "periodo_train": "2026-04-01/2026-09-15",
+  "periodo_train_fuente": "etiqueta de versión train_period",
+  "exportado_en": "2026-11-15T04:46:53+00:00"
+}

@@ -1,7 +1,10 @@
 """Exporta del Model Registry el modelo que empaqueta la imagen del servicio de predicción.
 
 Resuelve ``models:/<nombre>@<alias>`` en el servidor de MLflow, descarga esa versión a
-``models/p1/`` y guarda en ``metadata.json`` el nombre, el alias y la versión resueltos.
+``models/p1/`` y guarda en ``metadata.json`` el nombre, el alias y la versión resueltos,
+junto con el periodo de entrenamiento del modelo, que el A/B usa para verificar que no
+evalúa sobre datos de entrenamiento.
+
 La API (``app/model_service.py``) carga esa carpeta por omisión, así que la imagen de
 Docker responde sin un servidor de MLflow.
 
@@ -34,6 +37,25 @@ from mibici.config import (
 
 app = typer.Typer(add_completion=False)
 
+# Etiqueta de versión y parámetro de corrida que declaran el periodo de entrenamiento
+ETIQUETA_PERIODO_TRAIN = "train_period"
+PARAMETRO_PERIODO_TRAIN = "periodo_train"
+
+
+def periodo_entrenamiento(version, client: MlflowClient) -> tuple[str | None, str | None]:
+    """Periodo de entrenamiento de una versión registrada y de dónde se tomó.
+
+    Usa la etiqueta de versión ``train_period``; si no existe, el parámetro
+    ``periodo_train`` de la corrida de origen. Devuelve ``(None, None)`` si ninguno existe.
+    """
+    periodo = (version.tags or {}).get(ETIQUETA_PERIODO_TRAIN)
+    if periodo:
+        return periodo, f"etiqueta de versión {ETIQUETA_PERIODO_TRAIN}"
+    periodo = client.get_run(version.run_id).data.params.get(PARAMETRO_PERIODO_TRAIN)
+    if periodo:
+        return periodo, f"parámetro {PARAMETRO_PERIODO_TRAIN} de la corrida {version.run_id}"
+    return None, None
+
 
 def exportar_modelo(
     nombre: str,
@@ -57,12 +79,15 @@ def exportar_modelo(
         )
 
     version = client.get_model_version_by_alias(name=nombre, alias=alias)
+    periodo, fuente = periodo_entrenamiento(version, client)
     metadatos = {
         "model_name": nombre,
         "alias": alias,
         "version": str(version.version),
         "model_uri": f"models:/{nombre}@{alias}",
         "run_id": version.run_id,
+        "periodo_train": periodo,
+        "periodo_train_fuente": fuente,
         "exportado_en": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
 

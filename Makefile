@@ -130,6 +130,20 @@ modelo-servicio:
 	$(PYTHON_INTERPRETER) -m mibici.modeling.serving --reemplazar
 
 
+## Train and register the retrained P1 challenger, alias challenger (needs the MLflow server)
+# Cada ejecución registra una versión nueva; por eso la exportación es un target aparte,
+# que se puede repetir sin volver a entrenar ni a registrar.
+.PHONY: modelo-challenger
+modelo-challenger:
+	$(PYTHON_INTERPRETER) -m mibici.modeling.challenger
+
+
+## Export the P1 challenger from the Model Registry to models/p1_challenger/ (needs the MLflow server)
+.PHONY: exportar-challenger
+exportar-challenger:
+	$(PYTHON_INTERPRETER) -m mibici.modeling.serving --alias challenger --destino models/p1_challenger --reemplazar
+
+
 ## Build the Docker image of the prediction API
 .PHONY: docker-build
 docker-build:
@@ -160,6 +174,12 @@ drift:
 	$(PYTHON_INTERPRETER) -m mibici.monitoring.drift --actual test
 
 
+## Run data drift analysis for September 1-15, 2026, the data available when retraining the challenger
+.PHONY: drift-primera-quincena
+drift-primera-quincena:
+	$(PYTHON_INTERPRETER) -m mibici.monitoring.drift --actual primera_quincena
+
+
 ## Run data drift summary
 .PHONY: drift-resumen
 drift-resumen:
@@ -172,10 +192,11 @@ drift-interpretacion:
 	$(PYTHON_INTERPRETER) -m mibici.monitoring.interpretacion
 
 
-## Run A/B testing between Champion and Challenger on September 2026
+## Run A/B testing between the champion and the retrained challenger on September 16-30, 2026
+# Incluye como referencia el challenger de abril a agosto, sin registrar, sobre las mismas filas
 .PHONY: ab-test
 ab-test:
-	$(PYTHON_INTERPRETER) -m mibici.monitoring.ab_test
+	$(PYTHON_INTERPRETER) -m mibici.monitoring.ab_test --incluir-referencia
 
 
 
