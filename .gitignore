@@ -212,6 +212,12 @@ models/*
 *.pkl
 *.joblib
 *.skops
+# Excepción: el champion de P1 que empaqueta la imagen del servicio (make modelo-servicio)
+!models/p1/
+!models/p1/**
+# Excepción: el challenger reentrenado de P1 que compara el A/B (make exportar-challenger)
+!models/p1_challenger/
+!models/p1_challenger/**
 
 # Datos de MiBici fuera de data/
 *.parquet
@@ -221,6 +227,5 @@ datos_abiertos_*.csv
 reports/deepchecks/
 reports/security/
 
-# Entornos virtuales del proyecto
-.venv/
-.venv310/
+# Entornos virtuales locales
+.venv*/

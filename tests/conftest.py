@@ -16,9 +16,6 @@ os.environ["DO_NOT_TRACK"] = "true"
 
 import socket
 import uuid
-
-import mlflow
-from mlflow.tracking import MlflowClient
 import numpy as np
 import pandas as pd
 import pytest
@@ -162,6 +159,9 @@ def mlflow_registro_temporal(tmp_path, monkeypatch):
 
 
 def preparar_mlflow(uri, tmp_path, monkeypatch):
+    import mlflow
+    from mlflow.tracking import MlflowClient
+
     anterior = mlflow.get_tracking_uri()
     monkeypatch.setenv("MLFLOW_TRACKING_URI", uri)
     mlflow.set_tracking_uri(uri)
@@ -186,6 +186,8 @@ def modelos_capturados(monkeypatch) -> list:
     Las pruebas de reproducibilidad sólo necesitan el estimador ajustado; la prueba que
     registra y carga el modelo completo no usa este fixture.
     """
+    import mlflow
+
     capturados = []
 
     def capturar(*args, **kwargs):
