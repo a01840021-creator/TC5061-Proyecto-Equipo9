@@ -1,0 +1,93 @@
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mibici-api
+    ports:
+      - "8000:8000"
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow:5000
+      MODEL_URI: /srv/models/p1
+      LOGURU_LEVEL: ${LOGURU_LEVEL:-INFO}
+      LOGURU_COLORIZE: ${LOGURU_COLORIZE:-false}
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - mibici-network
+    cpus: 1.0
+    mem_limit: 1g
+    mem_reservation: 256m
+
+  mlflow-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    user: "0:0"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "mkdir -p /mlflow/artifacts && chown -R 10001:10001 /mlflow"
+    volumes:
+      - mlflow-data:/mlflow
+    restart: "no"
+    networks:
+      - mibici-network
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mibici-mlflow
+    depends_on:
+      mlflow-init:
+        condition: service_completed_successfully
+    command:
+      - mlflow
+      - server
+      - --backend-store-uri
+      - sqlite:////home/api/mlflow/mlflow.db
+      - --artifacts-destination
+      - /home/api/mlflow/artifacts
+      - --host
+      - 0.0.0.0
+      - --port
+      - "5000"
+      - --workers
+      - "1"
+    ports:
+      - "5001:5000"
+    volumes:
+      - mlflow-data:/home/api/mlflow
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=3)"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+    networks:
+      - mibici-network
+    cpus: 1.0
+    mem_limit: 1g
+    mem_reservation: 256m
+
+volumes:
+  mlflow-data:
+
+networks:
+  mibici-network:
+    driver: bridge
