@@ -171,9 +171,29 @@ El drift no se oculta ni se considera automáticamente un error: al dividir por 
 
 Los resultados de P1, P2, P3 y del dataset base, su interpretación y las decisiones de tratamiento están en [`references/calidad_datos.md`](references/calidad_datos.md).
 
-## Integración continua
+## Integración continua y despliegue (CI/CD)
 
-Cada pull request hacia `main` y cada push a `main` ejecutan [`.github/workflows/ci.yml`](.github/workflows/ci.yml) en una máquina nueva de Ubuntu con Python 3.10.20: instala `requirements.txt` y corre `ruff check`, `ruff format --check`, `python -m pytest -q tests` y `make security`. Las pruebas y los chequeos de seguridad solo protegen el proyecto si se ejecutan en cada cambio, así que un cambio que rompe una prueba o agrega una vulnerabilidad que no está en la lista de riesgos aceptados se detecta en el pull request, antes de fusionarse. Como esa máquina no tiene datos, secretos ni servidor de MLflow, cada corrida comprueba además que las pruebas se reproducen desde un clon limpio. Solo usa la red para instalar las dependencias y para que pip-audit consulte las vulnerabilidades conocidas.
+Cada `pull_request` hacia `main`, cada `push` a `main` y cualquier disparo manual (`workflow_dispatch`) ejecutan el pipeline [`.github/workflows/ci.yml`](.github/workflows/ci.yml) en `ubuntu-latest`, dividido en dos jobs encadenados:
+
+1. **`verificar` (Estilo, pruebas y seguridad):**
+   - Instala Python 3.10.20 con **caché de dependencias (`pip`)** vinculado a `requirements.txt`.
+   - Corre `ruff check`, `ruff format --check`, `python -m pytest -q tests` y `make security` (Bandit + `pip-audit` sobre `requirements.txt` y `requirements-serving.txt`).
+   - Se ejecuta desde un clon limpio, sin datos de `data/`, secretos ni un servidor externo de MLflow.
+2. **`construir-y-validar` (Imagen Docker y validación con Compose, depende de `verificar`):**
+   - Construye la imagen del servicio con **Docker Buildx** y **caché de capas de GitHub Actions (`type=gha`)** para reutilizar la instalación de dependencias entre corridas.
+   - Verifica en los metadatos de la imagen construida que el contenedor corra como usuario no-root (`api`) y cuente con `HEALTHCHECK`.
+   - Valida la sintaxis de `docker-compose.yml` (`docker compose config -q`).
+   - Levanta los servicios (`api` en `:8000` y `mlflow` en `:5001`) reutilizando la imagen recién construida (`--no-build --wait`), confirma que ambos alcanzan estado `healthy`, consulta `http://localhost:5001/health` y ejecuta los 10 smoke tests de `scripts/smoke_test.sh` contra la API.
+   - Publica un resumen en el *Job Summary* de GitHub Actions, muestra logs si ocurre algún fallo y limpia contenedores y volúmenes temporales al terminar (`docker compose down -v`).
+
+Para reproducir en local las mismas validaciones del pipeline:
+
+```bash
+make lint
+make test
+make security
+make compose-validate
+```
 
 ## Seguridad y gestión de riesgos
 
@@ -664,7 +684,7 @@ El proyecto incluye un despliegue compuesto por dos servicios: la API de predicc
 
 ### Configuración
 
-El archivo `compose.yaml` define los servicios, la red interna, los chequeos de salud y los límites de recursos.
+El archivo `docker-compose.yml` define los servicios, la red interna, los chequeos de salud y los límites de recursos. También se puede levantar o validar de extremo a extremo con `make compose-up`, `make compose-down` y `make compose-validate`.
 
 El archivo `.env.example` contiene variables de configuración sin credenciales. Para utilizar valores personalizados, se puede crear un archivo `.env` a partir de él:
 
