@@ -664,7 +664,7 @@ El proyecto incluye un despliegue compuesto por dos servicios: la API de predicc
 
 ### Configuración
 
-El archivo `compose.yaml` define los servicios, la red interna, los chequeos de salud y los límites de recursos.
+El archivo `docker-compose.yml` define los servicios, la red interna, los chequeos de salud y los límites de recursos.
 
 El archivo `.env.example` contiene variables de configuración sin credenciales. Para utilizar valores personalizados, se puede crear un archivo `.env` a partir de él:
 
@@ -672,7 +672,9 @@ El archivo `.env.example` contiene variables de configuración sin credenciales.
 cp .env.example .env
 ```
 
-Docker Compose utiliza las variables `LOGURU_LEVEL` y `LOGURU_COLORIZE` para configurar los registros de la API. Dentro de la red de contenedores, la API utiliza `http://mlflow:5000` para comunicarse con MLflow.
+Docker Compose utiliza las variables `LOGURU_LEVEL` y `LOGURU_COLORIZE` para configurar los registros de la API.
+
+La API carga por defecto el modelo empaquetado en `/srv/models/p1`. También queda configurada la URI interna `http://mlflow:5000` para operaciones de tracking o para utilizar posteriormente una URI del Model Registry.
 
 ### Iniciar los servicios
 
