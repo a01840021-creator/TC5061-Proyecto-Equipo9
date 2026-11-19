@@ -220,3 +220,7 @@ datos_abiertos_*.csv
 # Reportes locales generados por DeepChecks y herramientas de seguridad
 reports/deepchecks/
 reports/security/
+
+# Entornos virtuales del proyecto
+.venv/
+.venv310/
