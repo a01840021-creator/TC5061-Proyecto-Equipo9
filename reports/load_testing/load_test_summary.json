@@ -1,0 +1,29 @@
+{
+  "endpoint": "POST /predict/p1",
+  "solicitudes_totales": 13565,
+  "solicitudes_exitosas": 13565,
+  "solicitudes_fallidas": 0,
+  "tasa_error_pct": 0.0,
+  "rps_promedio": 37.5929,
+  "latencia_promedio_ms": 17.736,
+  "latencia_p50_ms": 11.0,
+  "latencia_p95_ms": 43.0,
+  "latencia_p99_ms": 180.0,
+  "duracion_segundos": 357.0,
+  "recursos_por_contenedor": {
+    "mibici-api": {
+      "muestras": 72,
+      "cpu_promedio_pct": 26.068,
+      "cpu_maximo_pct": 60.32,
+      "memoria_promedio_pct": 16.086,
+      "memoria_maxima_pct": 16.47
+    },
+    "mibici-mlflow": {
+      "muestras": 72,
+      "cpu_promedio_pct": 5.182,
+      "cpu_maximo_pct": 102.5,
+      "memoria_promedio_pct": 99.008,
+      "memoria_maxima_pct": 99.99
+    }
+  }
+}

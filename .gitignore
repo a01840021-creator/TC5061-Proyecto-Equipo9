@@ -229,3 +229,8 @@ reports/security/
 
 # Entornos virtuales locales
 .venv*/
+
+# Artefactos crudos de Locust
+reports/load_testing/locust_*.csv
+reports/load_testing/locust_report.html
+reports/load_testing/locust_summary_raw.json
