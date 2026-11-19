@@ -1,6 +1,7 @@
 
 services:
   api:
+    image: ${MIBICI_IMAGE:-mibici-api:local}
     build:
       context: .
       dockerfile: Dockerfile
@@ -30,6 +31,7 @@ services:
     mem_reservation: 256m
 
   mlflow-init:
+    image: ${MIBICI_IMAGE:-mibici-api:local}
     build:
       context: .
       dockerfile: Dockerfile
@@ -44,6 +46,7 @@ services:
       - mibici-network
 
   mlflow:
+    image: ${MIBICI_IMAGE:-mibici-api:local}
     build:
       context: .
       dockerfile: Dockerfile

@@ -168,6 +168,30 @@ smoke-test-container:
 	./scripts/smoke_test.sh -c
 
 
+## Build and start API + MLflow stack with Docker Compose
+.PHONY: compose-up
+compose-up:
+	docker compose up -d --build --wait
+
+
+## Stop and remove Docker Compose containers (preserving MLflow volume)
+.PHONY: compose-down
+compose-down:
+	docker compose down
+
+
+## Validate Docker Compose stack end-to-end (config, healthchecks, MLflow and smoke tests)
+.PHONY: compose-validate
+compose-validate:
+	@bash -euo pipefail -c ' \
+		trap "docker compose down -v --remove-orphans" EXIT; \
+		docker compose config -q; \
+		docker compose up -d --build --wait --wait-timeout 120; \
+		curl -sf http://localhost:5001/health >/dev/null; \
+		./scripts/smoke_test.sh --url http://localhost:8000; \
+	'
+
+
 ## Run data drift analysis with Evidently for P1
 .PHONY: drift
 drift:

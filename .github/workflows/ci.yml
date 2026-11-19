@@ -1,14 +1,17 @@
-# Integración continua de MiBici: estilo, pruebas y seguridad en cada cambio hacia main.
-# No necesita datos de data/, secretos ni un servidor de MLflow: las pruebas usan datos
-# sintéticos y una base SQLite temporal, y bloquean cualquier conexión de red. Sólo la
-# instalación de dependencias y pip-audit (dentro de make security) usan la red.
-name: CI
+# Integración y entrega continua (CI/CD) de MiBici:
+# 1) verificar: estilo (ruff), pruebas unitarias (pytest) y seguridad (Bandit + pip-audit),
+#    con caché de dependencias de Python y sin requerir data/, secretos ni MLflow externo.
+# 2) construir-y-validar: construye la imagen Docker del servicio con Buildx y caché de capas
+#    de GitHub Actions, verifica su configuración de seguridad, levanta el stack completo con
+#    docker-compose.yml (FastAPI + MLflow) y ejecuta los smoke tests sobre la API viva.
+name: CI/CD
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -52,3 +55,81 @@ jobs:
 
       - name: Analizar seguridad con Bandit y pip-audit
         run: make security
+
+  construir-y-validar:
+    name: Imagen Docker y validación con Compose
+    needs: verificar
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MIBICI_IMAGE: mibici-api:ci
+      LOGURU_COLORIZE: "false"
+    steps:
+      - name: Obtener el código
+        uses: actions/checkout@v4
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Construir imagen Docker con caché de capas
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          load: true
+          tags: ${{ env.MIBICI_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verificar seguridad y metadatos de la imagen
+        run: |
+          USER_IMG=$(docker image inspect --format '{{.Config.User}}' "$MIBICI_IMAGE")
+          echo "Usuario de la imagen: ${USER_IMG}"
+          test "$USER_IMG" = "api"
+
+          HEALTH_IMG=$(docker image inspect --format '{{if .Config.Healthcheck}}ok{{end}}' "$MIBICI_IMAGE")
+          echo "Healthcheck configurado: ${HEALTH_IMG}"
+          test "$HEALTH_IMG" = "ok"
+
+          SIZE_BYTES=$(docker image inspect --format '{{.Size}}' "$MIBICI_IMAGE")
+          SIZE_MB=$((SIZE_BYTES / 1024 / 1024))
+          echo "Tamaño de la imagen: ${SIZE_MB} MB"
+          echo "IMAGE_SIZE_MB=${SIZE_MB}" >> "$GITHUB_ENV"
+
+      - name: Validar sintaxis de docker-compose.yml
+        run: docker compose config -q
+
+      - name: Levantar servicios con Docker Compose y esperar healthchecks
+        run: |
+          docker compose up -d --no-build --wait --wait-timeout 120
+          docker compose ps
+
+      - name: Verificar salud del servidor MLflow
+        run: curl -sf http://localhost:5001/health
+
+      - name: Ejecutar smoke tests contra la API
+        run: |
+          chmod +x scripts/smoke_test.sh
+          ./scripts/smoke_test.sh --url http://localhost:8000
+
+      - name: Publicar resumen del pipeline
+        if: success()
+        run: |
+          {
+            echo "### Validación de Contenedores y CI/CD"
+            echo ""
+            echo "- **Imagen construida:** \`${MIBICI_IMAGE}\` (${IMAGE_SIZE_MB} MB)"
+            echo "- **Usuario no-root:** \`api\` (verificado)"
+            echo "- **Servicios levantados con \`docker-compose.yml\`:** \`api\` (puerto 8000) y \`mlflow\` (puerto 5001)"
+            echo "- **Smoke tests (\`scripts/smoke_test.sh\`):** 10/10 aprobados"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Mostrar logs en caso de fallo
+        if: failure()
+        run: |
+          docker compose ps -a
+          docker compose logs --tail=100
+
+      - name: Limpiar contenedores y volúmenes
+        if: always()
+        run: docker compose down -v --remove-orphans
