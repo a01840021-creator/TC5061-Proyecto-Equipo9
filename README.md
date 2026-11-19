@@ -649,3 +649,100 @@ Ejecución del contenedor en Docker (`docker ps`), verificación del estado `(he
 ![Pruebas de humo y validaciones Pydantic](reports/figures/evidencia_2_smoke_tests.png)
 
 Validación de esquemas con Pydantic (rechazo con 422 ante horas inválidas, inconsistencias de calendario o campos requeridos omitidos) y ejecución completa de la suite de pruebas de humo automatizadas (`scripts/smoke_test.sh`) con 10/10 pruebas aprobadas (100%). El reporte técnico reproducible se encuentra en [`docs/evidencias/evidencia_servicio_contenedor.md`](docs/evidencias/evidencia_servicio_contenedor.md).
+
+
+
+## Despliegue con Docker Compose
+
+El proyecto incluye un despliegue compuesto por dos servicios: la API de predicción con FastAPI y el servidor de MLflow. Ambos se ejecutan en contenedores independientes y se comunican mediante una red interna de Docker Compose.
+
+### Requisitos previos
+
+- Docker Desktop instalado y en ejecución.
+- Docker Compose disponible mediante `docker compose`.
+- Clonar el repositorio y ubicarse en su directorio raíz.
+
+### Configuración
+
+El archivo `compose.yaml` define los servicios, la red interna, los chequeos de salud y los límites de recursos.
+
+El archivo `.env.example` contiene variables de configuración sin credenciales. Para utilizar valores personalizados, se puede crear un archivo `.env` a partir de él:
+
+```bash
+cp .env.example .env
+```
+
+Docker Compose utiliza las variables `LOGURU_LEVEL` y `LOGURU_COLORIZE` para configurar los registros de la API. Dentro de la red de contenedores, la API utiliza `http://mlflow:5000` para comunicarse con MLflow.
+
+### Iniciar los servicios
+
+Desde la raíz del repositorio, validar la configuración:
+
+```bash
+docker compose config
+```
+
+Construir las imágenes e iniciar los servicios en segundo plano:
+
+```bash
+docker compose up -d --build
+```
+
+Consultar el estado de los contenedores:
+
+```bash
+docker compose ps
+```
+
+Los servicios principales deben aparecer con estado `healthy`. El servicio auxiliar `mlflow-init` prepara los permisos del volumen persistente para que MLflow pueda escribir su base de datos y sus artefactos; por eso termina su ejecución con código `0`.
+
+### Acceso a los servicios
+
+| Servicio | Dirección |
+|---|---|
+| API FastAPI | http://localhost:8000 |
+| Documentación interactiva de la API | http://localhost:8000/docs |
+| MLflow | http://localhost:5001 |
+
+MLflow escucha en el puerto `5000` dentro de la red de Docker y se publica en el puerto `5001` del equipo anfitrión.
+
+### Verificar la salud de los servicios
+
+Consultar el estado de la API:
+
+```bash
+curl -i http://localhost:8000/health/ready
+```
+
+Consultar el estado de MLflow:
+
+```bash
+curl -i http://localhost:5001/health
+```
+
+Ambos servicios deben responder con código HTTP `200 OK`.
+
+Para consultar los registros:
+
+```bash
+docker compose logs --tail=50 api
+docker compose logs --tail=50 mlflow
+```
+
+### Persistencia y apagado
+
+MLflow utiliza el volumen nombrado `mlflow-data` para conservar su base de datos SQLite y sus artefactos. Los datos permanecen disponibles aunque se eliminen y se creen nuevamente los contenedores.
+
+Para detener y eliminar los contenedores y la red:
+
+```bash
+docker compose down
+```
+
+Para volver a iniciar los servicios:
+
+```bash
+docker compose up -d
+```
+
+**Importante:** `docker compose down` conserva el volumen. No utilizar `docker compose down -v` si se desea mantener la información almacenada por MLflow, ya que esa opción elimina también los volúmenes.
