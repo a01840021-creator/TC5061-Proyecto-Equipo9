@@ -766,3 +766,85 @@ docker compose up -d
 ```
 
 **Importante:** `docker compose down` conserva el volumen. No utilizar `docker compose down -v` si se desea mantener la información almacenada por MLflow, ya que esa opción elimina también los volúmenes.
+
+## Pruebas de carga y monitoreo de recursos
+
+El proyecto utiliza Locust para evaluar `POST /predict/p1` con entradas válidas y una proporción pequeña de consultas a `GET /health/ready`. El escenario incrementa gradualmente la concurrencia para observar throughput, latencia, errores y el punto en que los recursos del servicio comienzan a saturarse.
+
+La versión `locust==2.46.0` se mantiene porque es la última línea compatible con Python 3.10 antes de que Locust elevara su requisito mínimo a Python 3.11.
+
+### Perfiles disponibles
+
+| Perfil | Etapas | Duración aproximada | Uso |
+|---|---|---:|---|
+| `smoke` | 2 y 5 usuarios | 20 segundos | Confirmar instalación, conectividad y generación de artefactos. |
+| `standard` | 5, 25, 50 y 100 usuarios | 6 minutos | Medición final para las gráficas y el análisis FinOps. |
+
+El tiempo adicional que reserva el script permite terminar la captura de recursos y guardar los resultados.
+
+### Ejecución
+
+Instalar el entorno declarado y ejecutar primero la validación rápida:
+
+```bash
+python -m pip install -r requirements.txt
+make load-test-smoke
+```
+
+Si la validación rápida concluye correctamente, ejecutar el escenario final:
+
+```bash
+make load-test
+```
+
+Ambos comandos:
+
+1. Construyen y levantan API y MLflow con Docker Compose.
+2. Esperan a que los healthchecks estén aprobados.
+3. Ejecutan Locust en modo `headless`.
+4. Capturan CPU y memoria de `mibici-api` y `mibici-mlflow` con `docker stats`.
+5. Generan un reporte HTML, archivos CSV, gráficas PNG y un resumen JSON.
+
+Los contenedores permanecen activos para inspeccionar su estado. Al terminar:
+
+```bash
+docker compose ps
+docker compose down
+```
+
+### Artefactos generados
+
+Los resultados se guardan en `reports/load_testing/`:
+
+| Archivo | Contenido |
+|---|---|
+| `locust_report.html` | Reporte interactivo generado por Locust. |
+| `locust_stats.csv` | Métricas finales por endpoint. |
+| `locust_stats_history.csv` | Evolución temporal de concurrencia, RPS y latencia. |
+| `locust_failures.csv` | Errores observados durante la prueba. |
+| `resources.csv` | CPU y memoria capturadas con `docker stats`. |
+| `locust_performance.png` | Throughput, percentiles, fallos y usuarios simulados. |
+| `resource_usage.png` | Consumo de CPU y memoria por contenedor. |
+| `load_test_summary.json` | Resumen reproducible para el cálculo FinOps. |
+
+Las gráficas y el resumen también pueden regenerarse sin repetir la carga:
+
+```bash
+make load-report
+```
+
+Para probar contra otra URL se puede definir:
+
+```bash
+MIBICI_API_URL=http://localhost:8000 make load-test
+```
+
+### Criterios de interpretación
+
+- **RPS:** capacidad efectiva del servicio. Si deja de crecer al aumentar usuarios, existe saturación.
+- **p95 y p99:** experiencia de las solicitudes más lentas; son más informativas que el promedio para establecer un SLO.
+- **Tasa de error:** debe analizarse junto con la concurrencia para identificar el nivel en que el servicio deja de responder de manera confiable.
+- **CPU y memoria:** permiten distinguir un cuello de botella computacional de uno asociado con espera, red o dependencias.
+- **Solicitudes exitosas:** denominador recomendado para calcular el costo por inferencia útil en el análisis FinOps.
+
+Los valores finales no deben escribirse manualmente: se toman de `load_test_summary.json`, que conserva la relación entre desempeño, concurrencia y recursos del mismo experimento.

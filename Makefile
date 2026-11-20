@@ -192,6 +192,24 @@ compose-validate:
 	'
 
 
+## Run a short 20-second load-test validation and collect container resources
+.PHONY: load-test-smoke
+load-test-smoke:
+	MIBICI_LOAD_PROFILE=smoke ./scripts/run_load_test.sh
+
+
+## Run the standard six-minute staged Locust scenario and generate report artifacts
+.PHONY: load-test
+load-test:
+	MIBICI_LOAD_PROFILE=standard ./scripts/run_load_test.sh
+
+
+## Regenerate charts and summary from existing Locust and docker stats CSV files
+.PHONY: load-report
+load-report:
+	$(PYTHON_INTERPRETER) -m mibici.load_testing.report
+
+
 ## Run data drift analysis with Evidently for P1
 .PHONY: drift
 drift:
