@@ -848,3 +848,17 @@ MIBICI_API_URL=http://localhost:8000 make load-test
 - **Solicitudes exitosas:** denominador recomendado para calcular el costo por inferencia útil en el análisis FinOps.
 
 Los valores finales no deben escribirse manualmente: se toman de `load_test_summary.json`, que conserva la relación entre desempeño, concurrencia y recursos del mismo experimento.
+
+## Análisis FinOps
+
+Se compara el costo de desplegar la API de predicción de P1 en un servidor dedicado EC2 contra una función serverless Lambda, con la demanda real de P1: 484 estaciones con una predicción por hora, 348,480 predicciones al mes. Los precios son de AWS en US East (N. Virginia), bajo demanda y en USD.
+Con esa demanda Lambda es la opción más barata; una instancia t4g.micro solo conviene a partir de unos 12.3 millones de predicciones al mes (4.67 RPS sostenidos), 35 veces la demanda actual.
+
+| Opción | Costo mensual (USD) | Costo por millón de predicciones (USD) |
+| :--- | ---: | ---: |
+| Lambda, con nivel gratuito | 0.00 | 0.00 |
+| Lambda, sin nivel gratuito | 0.17 | 0.50 |
+| EC2 t4g.micro | 6.13 | 17.60 |
+| EC2 t3.small | 15.18 | 43.57 |
+
+El detalle de supuestos, método, escalabilidad, optimizaciones y limitaciones está en [references/finops.md](references/finops.md).
