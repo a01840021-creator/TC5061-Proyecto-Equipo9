@@ -97,6 +97,18 @@ governance-report:
 	$(PYTHON_INTERPRETER) -m mibici.governance.registry_report
 
 
+## Validate deployment, operation contracts and preserved load/resource evidence
+.PHONY: operacion-final
+operacion-final:
+	$(PYTHON_INTERPRETER) -m mibici.operacion_final
+
+
+## Run the live operational demo script against running Docker Compose services
+.PHONY: demo-final
+demo-final:
+	./scripts/demo_final.sh
+
+
 ## Run DeepChecks data-quality reports on deterministic samples
 .PHONY: quality
 quality:

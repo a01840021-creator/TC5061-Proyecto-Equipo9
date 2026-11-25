@@ -1,0 +1,107 @@
+{
+  "proyecto": "TC5061-Proyecto-Equipo9",
+  "bloque": "despliegue_operacion_y_demo",
+  "generado_en_utc": "2026-11-25T19:07:45.555129+00:00",
+  "estado": "aprobado",
+  "fastapi": {
+    "model_name": "mibici-equipo09-p1-demanda",
+    "alias": "champion",
+    "version": "1",
+    "prediccion_caso_demo": 3.6143534553217758,
+    "rechazo_invalido_http": 422
+  },
+  "docker_compose": {
+    "servicios": [
+      "api",
+      "mlflow",
+      "mlflow-init"
+    ],
+    "puerto_api": [
+      "8000:8000"
+    ],
+    "puerto_mlflow": [
+      "5001:5000"
+    ],
+    "limites_api": {
+      "cpus": 1.0,
+      "mem_limit": "1g"
+    },
+    "limites_mlflow": {
+      "cpus": 1.0,
+      "mem_limit": "1g"
+    },
+    "volumen_persistente": "mlflow-data",
+    "red": "mibici-network"
+  },
+  "evidencia_carga_y_recursos": {
+    "muestras_csv": 144,
+    "resumen_carga": {
+      "endpoint": "POST /predict/p1",
+      "solicitudes_totales": 13565,
+      "solicitudes_exitosas": 13565,
+      "solicitudes_fallidas": 0,
+      "tasa_error_pct": 0.0,
+      "rps_promedio": 37.5929,
+      "latencia_promedio_ms": 17.736,
+      "latencia_p50_ms": 11.0,
+      "latencia_p95_ms": 43.0,
+      "latencia_p99_ms": 180.0,
+      "duracion_segundos": 357.0,
+      "recursos_por_contenedor": {
+        "mibici-api": {
+          "muestras": 72,
+          "cpu_promedio_pct": 26.068,
+          "cpu_maximo_pct": 60.32,
+          "memoria_promedio_pct": 16.086,
+          "memoria_maxima_pct": 16.47
+        },
+        "mibici-mlflow": {
+          "muestras": 72,
+          "cpu_promedio_pct": 5.182,
+          "cpu_maximo_pct": 102.5,
+          "memoria_promedio_pct": 99.008,
+          "memoria_maxima_pct": 99.99
+        }
+      }
+    }
+  },
+  "comandos_demo": {
+    "levantar_servicios": "docker compose up -d --build --wait",
+    "smoke_tests": "make smoke-test",
+    "demo_completa": "make demo-final",
+    "demo_paso_a_paso": "./scripts/demo_final.sh --pausa",
+    "apagar_servicios": "docker compose down"
+  },
+  "verificaciones": [
+    {
+      "nombre": "fastapi_contrato_y_prediccion",
+      "aprobado": true,
+      "detalle": "/health/ready=200 (loaded), /model-info=mibici-equipo09-p1-demanda@champion v1, /predict/p1=200 (pred=3.6143534553217758), validación inválida=422"
+    },
+    {
+      "nombre": "dockerfile_seguridad",
+      "aprobado": true,
+      "detalle": "USER api, HEALTHCHECK, EXPOSE 8000 y models/p1/ presentes"
+    },
+    {
+      "nombre": "docker_compose_orquestacion",
+      "aprobado": true,
+      "detalle": "Servicios api, mlflow y mlflow-init con red, volumen, healthchecks y límites de CPU/RAM"
+    },
+    {
+      "nombre": "locust_y_scripts_operacion",
+      "aprobado": true,
+      "detalle": "5 scripts/archivos presentes; 3 casos de Locust validados con DemandaEntrada"
+    },
+    {
+      "nombre": "evidencias_carga_preservadas",
+      "aprobado": true,
+      "detalle": "4 evidencias preservadas (JSON, CSV y 2 PNG válidos)"
+    },
+    {
+      "nombre": "kpis_carga_y_recursos",
+      "aprobado": true,
+      "detalle": "13565 solicitudes, 0.0% error, 37.5929 RPS, p50=11.0 ms, p95=43.0 ms, p99=180.0 ms; 144 muestras en resources.csv"
+    }
+  ]
+}

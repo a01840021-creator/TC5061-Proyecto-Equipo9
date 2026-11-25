@@ -48,7 +48,10 @@ COMPONENTES_REQUERIDOS: dict[str, tuple[str, ...]] = {
         "docker-compose.yml",
         ".github/workflows/ci.yml",
         "locustfile.py",
+        "mibici/operacion_final.py",
+        "scripts/demo_final.sh",
         "reports/load_testing/load_test_summary.json",
+        "reports/final/operacion_evidencia.json",
     ),
     "monitoreo_y_finops": (
         "mibici/monitoring/drift.py",
