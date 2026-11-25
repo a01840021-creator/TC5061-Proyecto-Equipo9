@@ -117,6 +117,7 @@ Las corridas que se reportan se lanzan con `mlflow run` (ver [MLflow Project](#m
 | `ruff check` y `ruff format --check` | Revisan el estilo del código |
 | `make audit-final` | Audita los componentes, versiones, dependencias, entry points y linaje; escribe `reports/final/auditoria_reproducibilidad.json` |
 | `make audit-final-strict` | Repite la auditoría y falla si todavía faltan el Model Card, la presentación o el video/enlace final |
+| `make governance-report` | Valida que el Model Card, las instantáneas champion/challenger y el A/B tengan identidades, periodos y decisión consistentes; escribe `reports/final/registry_inventory.json` |
 
 ## Auditoría de reproducibilidad del proyecto final
 
@@ -145,6 +146,28 @@ en [`references/auditoria_final.md`](references/auditoria_final.md). La vista co
 los componentes está en
 [`references/arquitectura_final.md`](references/arquitectura_final.md).
 
+## Model Card y estado del Model Registry
+
+El [`MODEL_CARD.md`](MODEL_CARD.md) documenta el propósito, datos, firma de entrada, métricas,
+limitaciones, riesgos éticos, despliegue, monitoreo y costo del modelo P1. Su estado operativo
+se expresa con aliases de MLflow: `champion` permanece en la versión 1 y `challenger` en la
+versión 3. El A/B del 16 al 30 de septiembre no aporta evidencia diaria suficiente para una
+promoción, por lo que la API sigue sirviendo la versión 1.
+
+La coherencia entre el Model Card, `models/p1/metadata.json`,
+`models/p1_challenger/metadata.json` y `reports/drift/ab_test_results.json` se verifica sin
+servidor de MLflow:
+
+```bash
+make governance-report
+python -m pytest -q tests/test_model_governance.py
+```
+
+El resultado auditable queda en
+[`reports/final/registry_inventory.json`](reports/final/registry_inventory.json). La base local
+de MLflow no se versiona; las instantáneas conservan nombre, alias, versión, `run_id`, URI y
+periodo de entrenamiento para reconstruir el linaje.
+
 ## Pruebas y calidad de datos
 
 ### Pruebas automatizadas
@@ -155,7 +178,7 @@ Todas las pruebas están en `tests/` y se ejecutan con un solo comando:
 python -m pytest -q tests
 ```
 
-La suite tiene 337 pruebas y tarda alrededor de un minuto y medio. No lee `data/`, no usa la red y no necesita un servidor de MLflow: `tests/conftest.py` genera viajes y estaciones sintéticos con semilla fija, da a cada prueba que registra en MLflow una base SQLite y una carpeta de artefactos dentro de `tmp_path`, y hace fallar cualquier conexión de red o resolución de nombres durante una prueba.
+La suite tiene 359 pruebas y tarda alrededor de un minuto y medio. No lee `data/`, no usa la red y no necesita un servidor de MLflow: `tests/conftest.py` genera viajes y estaciones sintéticos con semilla fija, da a cada prueba que registra en MLflow una base SQLite y una carpeta de artefactos dentro de `tmp_path`, y hace fallar cualquier conexión de red o resolución de nombres durante una prueba.
 
 | Archivo | Qué comprueba |
 | --- | --- |
@@ -175,6 +198,8 @@ La suite tiene 337 pruebas y tarda alrededor de un minuto y medio. No lee `data/
 | `test_challenger.py` | Con un Model Registry temporal y datos sintéticos: que el challenger hereda los hiperparámetros y la semilla del champion (también una semilla distinta de la global, en el modelo y en el parámetro registrado), se registra como versión nueva con las etiquetas de linaje y la instantánea del código con su SHA-256, mueve el alias `challenger` y deja `champion` intacto; que falla si el champion no es HistGradientBoosting o su semilla no es válida, la lectura de `git status`, que entrenamiento y evaluación no se traslapan, el motivo del reentrenamiento y el CLI |
 | `test_challenger_empaquetado.py` | Que `models/p1_challenger/` es la versión 3 con alias `challenger`, que carga y predice el valor fijado, que la API sigue cargando el champion y que el A/B la usa por omisión |
 | `test_ab_test.py` | Métricas por modelo, bootstrap de días (intervalo positivo si el challenger gana todos los días, intervalo con cero con puro ruido, mismo resultado con la misma semilla, percentiles contra la distribución exacta), días ganados y t por día en un caso conocido, peso igual por día con días de distinto tamaño, rechazo con menos de dos días, que la decisión sigue al análisis por día aunque la t por fila sea significativa, pruebas por fila iguales a SciPy (con la submuestra de Wilcoxon), verificación de que la evaluación es posterior al entrenamiento de cada modelo (rechazo el 15 de septiembre y aceptación desde el 16), JSON estricto de ida y vuelta con diferencias constantes y modelos idénticos, decisión con precisión completa, etiquetas tomadas de `metadata.json`, tabla de tres modelos, carga de modelos y CLI con y sin la referencia de abril a agosto |
+| `test_model_governance.py` | Secciones obligatorias e identidad del Model Card, coincidencia de las instantáneas champion/challenger con el A/B, versiones y aliases, separación temporal, decisión de producción e inventario JSON estricto |
+| `test_auditoria_final.py` | Componentes de la rúbrica, alineación de Python, dependencias fijadas, entry points, linaje del champion y distinción entre errores técnicos y entregables finales pendientes |
 | `test_artifacts.py`, `test_clustering.py`, `test_config.py` y `test_mlproject.py` | Gráficas, Ward con asignación por centroide, constantes de configuración (periodos del challenger, del A/B y de la primera quincena) y valores por defecto de `MLproject` |
 
 ### Validación de datos con DeepChecks
@@ -582,6 +607,7 @@ make ab-test                # reports/drift/ab_test_results.json
 ├── requirements.txt         dependencias con versión fija
 ├── requirements-serving.txt dependencias de la imagen del servicio
 ├── Dockerfile               imagen del servicio de predicción
+├── MODEL_CARD.md            propósito, evaluación, límites, riesgos y gobierno del champion P1
 ├── .dockerignore            lista blanca del contexto de la imagen
 ├── app/                     API de FastAPI: endpoints, esquemas de Pydantic y carga del modelo
 ├── scripts/
@@ -612,6 +638,8 @@ make ab-test                # reports/drift/ab_test_results.json
     ├── features.py          ingeniería de variables
     ├── quality.py           validación de P1, P2, P3 y el dataset base con DeepChecks
     ├── auditoria_final.py   contratos de reproducibilidad y pendientes de la entrega final
+    ├── governance/
+    │   └── registry_report.py reconciliación del Model Card, Registry exportado y A/B
     ├── modeling/
     │   ├── artifacts.py     gráficas y tablas registradas en MLflow
     │   ├── baselines.py     reglas base y métricas de P1, P2 y P3
