@@ -79,6 +79,18 @@ test:
 	$(PYTHON_INTERPRETER) -m pytest -q tests
 
 
+## Audit final-project components and write the reproducibility report
+.PHONY: audit-final
+audit-final:
+	$(PYTHON_INTERPRETER) -m mibici.auditoria_final
+
+
+## Audit the final project and fail if Model Card, presentation or video are missing
+.PHONY: audit-final-strict
+audit-final-strict:
+	$(PYTHON_INTERPRETER) -m mibici.auditoria_final --estricto
+
+
 ## Run DeepChecks data-quality reports on deterministic samples
 .PHONY: quality
 quality:

@@ -1,0 +1,80 @@
+{
+  "proyecto": "TC5061-Proyecto-Equipo9",
+  "commit": "59a67c253a9d22ec5ad894b99c9c211ed33a48d7",
+  "generado_en_utc": "2026-11-25T16:17:08.292951+00:00",
+  "resumen": {
+    "chequeos_totales": 11,
+    "errores_tecnicos": 0,
+    "pendientes_entrega": 3,
+    "base_tecnica_reproducible": true,
+    "entrega_completa": false
+  },
+  "chequeos": [
+    {
+      "nombre": "componentes_estructura_y_experimentacion",
+      "aprobado": true,
+      "detalle": "7 archivos requeridos presentes",
+      "severidad": "error"
+    },
+    {
+      "nombre": "componentes_modelo_y_registry",
+      "aprobado": true,
+      "detalle": "4 archivos requeridos presentes",
+      "severidad": "error"
+    },
+    {
+      "nombre": "componentes_despliegue_y_operacion",
+      "aprobado": true,
+      "detalle": "6 archivos requeridos presentes",
+      "severidad": "error"
+    },
+    {
+      "nombre": "componentes_monitoreo_y_finops",
+      "aprobado": true,
+      "detalle": "5 archivos requeridos presentes",
+      "severidad": "error"
+    },
+    {
+      "nombre": "version_python_alineada",
+      "aprobado": true,
+      "detalle": "python_env.yaml=3.10.20, Dockerfile=3.10.20, GitHub Actions=3.10.20",
+      "severidad": "error"
+    },
+    {
+      "nombre": "dependencias_con_version_exacta",
+      "aprobado": true,
+      "detalle": "Todas las dependencias usan ==",
+      "severidad": "error"
+    },
+    {
+      "nombre": "entry_points_mlflow",
+      "aprobado": true,
+      "detalle": "Disponibles: baseline, ingest, register, search, train",
+      "severidad": "error"
+    },
+    {
+      "nombre": "linaje_champion",
+      "aprobado": true,
+      "detalle": "mibici-equipo09-p1-demanda@champion, versión 1, run ed97390337ce4d2f8d95d0a58cc02b8f",
+      "severidad": "error"
+    },
+    {
+      "nombre": "entregable_model_card",
+      "aprobado": false,
+      "detalle": "Pendiente; se acepta: MODEL_CARD.md",
+      "severidad": "pendiente"
+    },
+    {
+      "nombre": "entregable_presentacion",
+      "aprobado": false,
+      "detalle": "Pendiente; se acepta: reports/final/TC5061_Proyecto_Final_Equipo09.pdf",
+      "severidad": "pendiente"
+    },
+    {
+      "nombre": "entregable_video_o_enlace",
+      "aprobado": false,
+      "detalle": "Pendiente; se acepta: reports/final/TC5061_Proyecto_Final_Equipo09.mp4 o reports/final/enlace_video.txt",
+      "severidad": "pendiente"
+    }
+  ]
+}
