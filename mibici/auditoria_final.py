@@ -36,9 +36,11 @@ COMPONENTES_REQUERIDOS: dict[str, tuple[str, ...]] = {
     ),
     "modelo_y_registry": (
         "mibici/modeling/registry.py",
+        "mibici/governance/registry_report.py",
         "models/p1/MLmodel",
         "models/p1/metadata.json",
         "models/p1/registered_model_meta",
+        "reports/final/registry_inventory.json",
     ),
     "despliegue_y_operacion": (
         "app/main.py",

@@ -1,11 +1,11 @@
 {
   "proyecto": "TC5061-Proyecto-Equipo9",
-  "commit": "59a67c253a9d22ec5ad894b99c9c211ed33a48d7",
-  "generado_en_utc": "2026-11-25T16:17:08.292951+00:00",
+  "commit": "18b8054f536ee1f709b321a688217f7874515314",
+  "generado_en_utc": "2026-11-25T18:07:05.388363+00:00",
   "resumen": {
     "chequeos_totales": 11,
     "errores_tecnicos": 0,
-    "pendientes_entrega": 3,
+    "pendientes_entrega": 2,
     "base_tecnica_reproducible": true,
     "entrega_completa": false
   },
@@ -19,7 +19,7 @@
     {
       "nombre": "componentes_modelo_y_registry",
       "aprobado": true,
-      "detalle": "4 archivos requeridos presentes",
+      "detalle": "6 archivos requeridos presentes",
       "severidad": "error"
     },
     {
@@ -60,8 +60,8 @@
     },
     {
       "nombre": "entregable_model_card",
-      "aprobado": false,
-      "detalle": "Pendiente; se acepta: MODEL_CARD.md",
+      "aprobado": true,
+      "detalle": "Presente: MODEL_CARD.md",
       "severidad": "pendiente"
     },
     {

@@ -91,6 +91,12 @@ audit-final-strict:
 	$(PYTHON_INTERPRETER) -m mibici.auditoria_final --estricto
 
 
+## Validate the Model Card against the exported Registry versions and A/B evidence
+.PHONY: governance-report
+governance-report:
+	$(PYTHON_INTERPRETER) -m mibici.governance.registry_report
+
+
 ## Run DeepChecks data-quality reports on deterministic samples
 .PHONY: quality
 quality:

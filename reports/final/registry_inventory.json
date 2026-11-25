@@ -1,0 +1,101 @@
+{
+  "proyecto": "TC5061-Proyecto-Equipo9",
+  "generado_en_utc": "2026-11-25T18:07:05.258414+00:00",
+  "estado": "aprobado",
+  "modelo_registrado": "mibici-equipo09-p1-demanda",
+  "produccion": {
+    "model_name": "mibici-equipo09-p1-demanda",
+    "alias": "champion",
+    "version": "1",
+    "model_uri": "models:/mibici-equipo09-p1-demanda@champion",
+    "run_id": "ed97390337ce4d2f8d95d0a58cc02b8f",
+    "periodo_train": "2026-04-01/2026-07-31",
+    "periodo_train_fuente": "parámetro periodo_train de la corrida ed97390337ce4d2f8d95d0a58cc02b8f",
+    "exportado_en": "2026-11-15T04:46:51+00:00"
+  },
+  "candidato": {
+    "model_name": "mibici-equipo09-p1-demanda",
+    "alias": "challenger",
+    "version": "3",
+    "model_uri": "models:/mibici-equipo09-p1-demanda@challenger",
+    "run_id": "3f30c52e3196483cb612dcce49fe8f8e",
+    "periodo_train": "2026-04-01/2026-09-15",
+    "periodo_train_fuente": "etiqueta de versión train_period",
+    "exportado_en": "2026-11-15T04:46:53+00:00"
+  },
+  "evaluacion_actual": {
+    "periodo": "2026-09-16/2026-09-30",
+    "n_observaciones": 174240,
+    "champion": {
+      "mae": 0.8879251295795038,
+      "rmse": 1.6198884803040174,
+      "wape_pct": 59.091684106812295,
+      "r2": 0.6625072481876066,
+      "sesgo": -0.20390300201091274
+    },
+    "challenger": {
+      "mae": 0.8856139566902669,
+      "rmse": 1.6083810414583677,
+      "wape_pct": 58.93787485675571,
+      "r2": 0.6672852100366504,
+      "sesgo": -0.1821933070439044
+    },
+    "diferencia_mae": -0.002311172889236879,
+    "diferencia_mae_pct": -0.2602891631562883,
+    "dias_ganados_challenger": 11,
+    "n_dias": 15,
+    "ic_95_diferencia_mae_diaria": [
+      -0.0007900030893873774,
+      0.005084447412045021
+    ],
+    "p_valor_t_dia": 0.15054939365418754
+  },
+  "decision": {
+    "recomendacion": "mantener_champion",
+    "base": "analisis_por_dia",
+    "justificacion": "El Challenger reduce el MAE en 0.26% (11 de 15 días ganados), pero la evidencia por día no es concluyente al nivel alfa = 0.05: intervalo bootstrap 95% de la diferencia diaria de MAE [-0.0008, +0.0051], t por día = 1.52 (p = 1.51e-01). Se mantiene el Champion.",
+    "accion": "Conservar champion v1; ajustar o ampliar la evaluación del challenger."
+  },
+  "verificaciones": [
+    {
+      "nombre": "mismo_modelo_registrado",
+      "aprobado": true,
+      "detalle": "champion=mibici-equipo09-p1-demanda; challenger=mibici-equipo09-p1-demanda"
+    },
+    {
+      "nombre": "aliases_operativos",
+      "aprobado": true,
+      "detalle": "champion=champion; challenger=challenger"
+    },
+    {
+      "nombre": "versiones_distintas",
+      "aprobado": true,
+      "detalle": "champion=v1; challenger=v3"
+    },
+    {
+      "nombre": "linaje_minimo",
+      "aprobado": true,
+      "detalle": "run_id, periodo_train y model_uri presentes"
+    },
+    {
+      "nombre": "ab_usa_versiones_exportadas",
+      "aprobado": true,
+      "detalle": "Las identidades del A/B coinciden con ambas instantáneas del Registry"
+    },
+    {
+      "nombre": "evaluacion_fuera_de_entrenamiento",
+      "aprobado": true,
+      "detalle": "primera evaluación=2026-09-16"
+    },
+    {
+      "nombre": "decision_de_produccion",
+      "aprobado": true,
+      "detalle": "recomendación=mantener_champion; alias champion permanece en v1"
+    },
+    {
+      "nombre": "model_card_completo_y_alineado",
+      "aprobado": true,
+      "detalle": "Model Card completo"
+    }
+  ]
+}
