@@ -115,6 +115,35 @@ Las corridas que se reportan se lanzan con `mlflow run` (ver [MLflow Project](#m
 | `pip-audit -r requirements.txt --no-deps --disable-pip` | Audita las versiones fijadas en `requirements.txt` (SCA); lista también el riesgo aceptado. Con `-r requirements-serving.txt` audita las de la imagen |
 | `make security` | Ejecuta Bandit y pip-audit sobre los dos archivos de dependencias con el riesgo aceptado declarado en el `Makefile`; termina en éxito si no hay hallazgos nuevos |
 | `ruff check` y `ruff format --check` | Revisan el estilo del código |
+| `make audit-final` | Audita los componentes, versiones, dependencias, entry points y linaje; escribe `reports/final/auditoria_reproducibilidad.json` |
+| `make audit-final-strict` | Repite la auditoría y falla si todavía faltan el Model Card, la presentación o el video/enlace final |
+
+## Auditoría de reproducibilidad del proyecto final
+
+La consolidación final se verifica con un chequeo ligero que no descarga datos, no entrena
+modelos y no requiere un servidor de MLflow:
+
+```bash
+make audit-final
+```
+
+El reporte separa los errores técnicos de los entregables todavía pendientes. Verifica que
+la estructura, MLflow Project, Registry, API, Docker Compose, CI/CD, Locust, Evidently, A/B
+testing y FinOps estén representados; también comprueba que Python 3.10.20 sea consistente,
+que las dependencias estén fijadas, que los entry points estén completos y que el champion
+empaquetado conserve su linaje.
+
+Cuando `MODEL_CARD.md`, `reports/final/TC5061_Proyecto_Final_Equipo09.pdf` y el video (o
+`reports/final/enlace_video.txt`) estén integrados, se ejecuta la validación bloqueante:
+
+```bash
+make audit-final-strict
+```
+
+El procedimiento completo desde un clon limpio y la interpretación del JSON se documentan
+en [`references/auditoria_final.md`](references/auditoria_final.md). La vista consolidada de
+los componentes está en
+[`references/arquitectura_final.md`](references/arquitectura_final.md).
 
 ## Pruebas y calidad de datos
 
@@ -568,10 +597,11 @@ make ab-test                # reports/drift/ab_test_results.json
 │   └── p1_challenger/       challenger reentrenado de P1 (versión 3) exportado para el A/B
 ├── notebooks/               solo exploración: 1.0-dcc-exploracion-inicial.ipynb
 ├── references/              manifiesto de datos, ML Canvas, definición de datos,
-│                            modelos, métricas, arquitectura, calidad de datos y seguridad
+│                            modelos, métricas, arquitectura, auditoría, calidad y seguridad
 ├── reports/
 │   ├── drift/               reportes de Evidently (agosto, septiembre y su primera quincena),
 │   │                        interpretación del drift y resultado del A/B
+│   ├── final/               auditoría, presentación y enlace o video de la entrega final
 │   └── figures/             figuras generadas y capturas de evidencia
 ├── MLproject                puntos de entrada de mlflow run
 ├── python_env.yaml          entorno de mlflow run
@@ -581,6 +611,7 @@ make ab-test                # reports/drift/ab_test_results.json
     ├── dataset.py           ingesta reproducible
     ├── features.py          ingeniería de variables
     ├── quality.py           validación de P1, P2, P3 y el dataset base con DeepChecks
+    ├── auditoria_final.py   contratos de reproducibilidad y pendientes de la entrega final
     ├── modeling/
     │   ├── artifacts.py     gráficas y tablas registradas en MLflow
     │   ├── baselines.py     reglas base y métricas de P1, P2 y P3
