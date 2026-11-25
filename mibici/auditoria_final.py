@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import re
-import subprocess
+import subprocess  # nosec B404
 from typing import Annotated, Any
 
 import typer
@@ -213,8 +213,11 @@ def verificar_entregables_finales(raiz: Path) -> list[ResultadoChequeo]:
 def obtener_commit(raiz: Path) -> str:
     """Devuelve el commit auditado o ``desconocido`` fuera de un clon Git."""
     try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "HEAD"], cwd=raiz, text=True, stderr=subprocess.DEVNULL
+        return subprocess.check_output(  # nosec B603 B607
+            ["git", "rev-parse", "HEAD"],
+            cwd=raiz,
+            text=True,
+            stderr=subprocess.DEVNULL,
         ).strip()
     except (OSError, subprocess.CalledProcessError):
         return "desconocido"
