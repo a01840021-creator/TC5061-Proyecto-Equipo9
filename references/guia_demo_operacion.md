@@ -61,7 +61,7 @@ Para evitar errores de escritura durante la grabación continua, el proyecto inc
 
 ## 3. Evidencias preservadas de carga y recursos
 
-Las evidencias de la prueba escalonada de 6 minutos (hasta 50 usuarios concurrentes) permanecen versionadas y auditadas en [`reports/final/operacion_evidencia.json`](../reports/final/operacion_evidencia.json):
+Las evidencias de la prueba escalonada de 6 minutos (de 5 a 100 usuarios concurrentes) permanecen versionadas y auditadas en [`reports/final/operacion_evidencia.json`](../reports/final/operacion_evidencia.json):
 
 | Indicador | Resultado medido | Artefacto de respaldo |
 | :--- | :--- | :--- |
