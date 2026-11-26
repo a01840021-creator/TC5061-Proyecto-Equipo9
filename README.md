@@ -118,6 +118,8 @@ Las corridas que se reportan se lanzan con `mlflow run` (ver [MLflow Project](#m
 | `make audit-final` | Audita los componentes, versiones, dependencias, entry points y linaje; escribe `reports/final/auditoria_reproducibilidad.json` |
 | `make audit-final-strict` | Repite la auditoría y falla si todavía faltan el Model Card, la presentación o el video/enlace final |
 | `make governance-report` | Valida que el Model Card, las instantáneas champion/challenger y el A/B tengan identidades, periodos y decisión consistentes; escribe `reports/final/registry_inventory.json` |
+| `make operacion-final` | Verifica FastAPI, Dockerfile, Docker Compose, Locust y las evidencias preservadas de carga/recursos; escribe `reports/final/operacion_evidencia.json` (`--verificar-vivo` valida además los contenedores activos) |
+| `make demo-final` | Ejecuta el guion automatizado de demostración operativa en vivo (`scripts/demo_final.sh`; admite `--pausa` paso a paso para narración) |
 
 ## Auditoría de reproducibilidad del proyecto final
 
@@ -168,6 +170,30 @@ El resultado auditable queda en
 de MLflow no se versiona; las instantáneas conservan nombre, alias, versión, `run_id`, URI y
 periodo de entrenamiento para reconstruir el linaje.
 
+## Operación y demostración final
+
+La verificación consolidada de despliegue y operación (FastAPI, `Dockerfile`, `docker-compose.yml`,
+`locustfile.py` y las evidencias preservadas de carga y consumo de recursos en `reports/load_testing/`)
+se ejecuta con un solo comando:
+
+```bash
+make operacion-final
+python -m pytest -q tests/test_operacion_final.py
+```
+
+El reporte auditable queda en
+[`reports/final/operacion_evidencia.json`](reports/final/operacion_evidencia.json). Con los servicios
+levantados en Docker Compose (`make compose-up`), se puede correr la comprobación en vivo y la
+secuencia preparada para la demostración del video final:
+
+```bash
+python -m mibici.operacion_final --verificar-vivo
+./scripts/demo_final.sh --pausa
+```
+
+El checklist previo a grabar, los tiempos de cada paso y la tabla consolidada de evidencias de carga
+y recursos están en [`references/guia_demo_operacion.md`](references/guia_demo_operacion.md).
+
 ## Pruebas y calidad de datos
 
 ### Pruebas automatizadas
@@ -178,7 +204,7 @@ Todas las pruebas están en `tests/` y se ejecutan con un solo comando:
 python -m pytest -q tests
 ```
 
-La suite tiene 359 pruebas y tarda alrededor de un minuto y medio. No lee `data/`, no usa la red y no necesita un servidor de MLflow: `tests/conftest.py` genera viajes y estaciones sintéticos con semilla fija, da a cada prueba que registra en MLflow una base SQLite y una carpeta de artefactos dentro de `tmp_path`, y hace fallar cualquier conexión de red o resolución de nombres durante una prueba.
+La suite tiene 367 pruebas y tarda alrededor de un minuto y medio. No lee `data/`, no usa la red y no necesita un servidor de MLflow: `tests/conftest.py` genera viajes y estaciones sintéticos con semilla fija, da a cada prueba que registra en MLflow una base SQLite y una carpeta de artefactos dentro de `tmp_path`, y hace fallar cualquier conexión de red o resolución de nombres durante una prueba.
 
 | Archivo | Qué comprueba |
 | --- | --- |
@@ -200,6 +226,7 @@ La suite tiene 359 pruebas y tarda alrededor de un minuto y medio. No lee `data/
 | `test_ab_test.py` | Métricas por modelo, bootstrap de días (intervalo positivo si el challenger gana todos los días, intervalo con cero con puro ruido, mismo resultado con la misma semilla, percentiles contra la distribución exacta), días ganados y t por día en un caso conocido, peso igual por día con días de distinto tamaño, rechazo con menos de dos días, que la decisión sigue al análisis por día aunque la t por fila sea significativa, pruebas por fila iguales a SciPy (con la submuestra de Wilcoxon), verificación de que la evaluación es posterior al entrenamiento de cada modelo (rechazo el 15 de septiembre y aceptación desde el 16), JSON estricto de ida y vuelta con diferencias constantes y modelos idénticos, decisión con precisión completa, etiquetas tomadas de `metadata.json`, tabla de tres modelos, carga de modelos y CLI con y sin la referencia de abril a agosto |
 | `test_model_governance.py` | Secciones obligatorias e identidad del Model Card, coincidencia de las instantáneas champion/challenger con el A/B, versiones y aliases, separación temporal, decisión de producción e inventario JSON estricto |
 | `test_auditoria_final.py` | Componentes de la rúbrica, alineación de Python, dependencias fijadas, entry points, linaje del champion y distinción entre errores técnicos y entregables finales pendientes |
+| `test_operacion_final.py` | Contratos operativos de FastAPI (salud, metadatos, predicción y 422), Dockerfile, docker-compose.yml, casos de Locust, evidencias preservadas de carga/recursos y reporte JSON en `reports/final/operacion_evidencia.json` |
 | `test_artifacts.py`, `test_clustering.py`, `test_config.py` y `test_mlproject.py` | Gráficas, Ward con asignación por centroide, constantes de configuración (periodos del challenger, del A/B y de la primera quincena) y valores por defecto de `MLproject` |
 
 ### Validación de datos con DeepChecks
@@ -611,7 +638,10 @@ make ab-test                # reports/drift/ab_test_results.json
 ├── .dockerignore            lista blanca del contexto de la imagen
 ├── app/                     API de FastAPI: endpoints, esquemas de Pydantic y carga del modelo
 ├── scripts/
-│   └── smoke_test.sh        suite de pruebas de humo y validación de endpoints
+│   ├── smoke_test.sh        suite de smoke tests y validación de endpoints
+│   ├── run_load_test.sh     ejecución reproducible de pruebas de carga con Locust
+│   ├── monitor_resources.sh captura periódica de CPU y RAM con docker stats
+│   └── demo_final.sh        guion ejecutable de la demostración operativa en vivo
 ├── pyproject.toml
 ├── data/                    no se versiona
 │   ├── raw/                 CSV originales descargados
@@ -638,6 +668,7 @@ make ab-test                # reports/drift/ab_test_results.json
     ├── features.py          ingeniería de variables
     ├── quality.py           validación de P1, P2, P3 y el dataset base con DeepChecks
     ├── auditoria_final.py   contratos de reproducibilidad y pendientes de la entrega final
+    ├── operacion_final.py   verificación de despliegue, Compose, Locust y evidencias de carga
     ├── governance/
     │   └── registry_report.py reconciliación del Model Card, Registry exportado y A/B
     ├── modeling/

@@ -1,7 +1,7 @@
 {
   "proyecto": "TC5061-Proyecto-Equipo9",
-  "commit": "18b8054f536ee1f709b321a688217f7874515314",
-  "generado_en_utc": "2026-11-25T18:07:05.388363+00:00",
+  "commit": "69ab5a7ec64a383105a25087acb142c02c5af652",
+  "generado_en_utc": "2026-11-25T19:07:45.752660+00:00",
   "resumen": {
     "chequeos_totales": 11,
     "errores_tecnicos": 0,
@@ -25,7 +25,7 @@
     {
       "nombre": "componentes_despliegue_y_operacion",
       "aprobado": true,
-      "detalle": "6 archivos requeridos presentes",
+      "detalle": "9 archivos requeridos presentes",
       "severidad": "error"
     },
     {
