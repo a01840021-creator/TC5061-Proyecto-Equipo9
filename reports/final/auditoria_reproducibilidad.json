@@ -1,13 +1,13 @@
 {
   "proyecto": "TC5061-Proyecto-Equipo9",
-  "commit": "69ab5a7ec64a383105a25087acb142c02c5af652",
-  "generado_en_utc": "2026-11-25T19:07:45.752660+00:00",
+  "commit": "a4382d7584778a1c8c27e44333f8b08df9cfb773",
+  "generado_en_utc": "2026-11-27T21:11:37.508370+00:00",
   "resumen": {
     "chequeos_totales": 11,
     "errores_tecnicos": 0,
-    "pendientes_entrega": 2,
+    "pendientes_entrega": 0,
     "base_tecnica_reproducible": true,
-    "entrega_completa": false
+    "entrega_completa": true
   },
   "chequeos": [
     {
@@ -66,14 +66,14 @@
     },
     {
       "nombre": "entregable_presentacion",
-      "aprobado": false,
-      "detalle": "Pendiente; se acepta: reports/final/TC5061_Proyecto_Final_Equipo09.pdf",
+      "aprobado": true,
+      "detalle": "Presente: reports/final/TC5061_Proyecto_Final_Equipo09.pdf",
       "severidad": "pendiente"
     },
     {
       "nombre": "entregable_video_o_enlace",
-      "aprobado": false,
-      "detalle": "Pendiente; se acepta: reports/final/TC5061_Proyecto_Final_Equipo09.mp4 o reports/final/enlace_video.txt",
+      "aprobado": true,
+      "detalle": "Presente: reports/final/enlace_video.txt",
       "severidad": "pendiente"
     }
   ]
